@@ -1,50 +1,51 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, differenceInHours } from 'date-fns'
-import { getBookings, getSessions, getStudios, cancel, getWaitlistEntries, waitlistAccept, getEntitlements } from '@/lib/api'
+import { useStore } from '@/lib/store'
 import { POLICY } from '@/lib/mockStore'
 import { Card, Chip, Button } from '@/components/ui'
-import type { Booking, Session, Studio, WaitlistEntry, Entitlement } from '@/types/domain'
 
 export default function BookingsPage() {
   const router = useRouter()
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [studios, setStudios] = useState<Studio[]>([])
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
-  const [entitlements, setEntitlements] = useState<Entitlement[]>([])
+  
+  const bookings = useStore((s) => s.bookings)
+  const loadBookings = useStore((s) => s.loadBookings)
+  const cancelBooking = useStore((s) => s.cancelBooking)
+  const sessions = useStore((s) => s.sessions)
+  const loadSessions = useStore((s) => s.loadSessions)
+  const studios = useStore((s) => s.studios)
+  const loadStudios = useStore((s) => s.loadStudios)
+  const getServiceType = useStore((s) => s.getServiceType)
+  const waitlistEntries = useStore((s) => s.waitlistEntries)
+  const loadWaitlist = useStore((s) => s.loadWaitlist)
+  const acceptWaitlistOffer = useStore((s) => s.acceptWaitlistOffer)
+  const entitlements = useStore((s) => s.entitlements)
+  const loadWallet = useStore((s) => s.loadWallet)
+  const pendingOperations = useStore((s) => s.pendingOperations)
+
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming')
   const [loading, setLoading] = useState(true)
-  const [cancelling, setCancelling] = useState<string | null>(null)
-
-  const loadData = useCallback(async () => {
-    const [b, s, st, w, e] = await Promise.all([
-      getBookings('user-1'),
-      getSessions(),
-      getStudios(),
-      getWaitlistEntries('user-1'),
-      getEntitlements('user-1'),
-    ])
-    setBookings(b)
-    setSessions(s)
-    setStudios(st)
-    setWaitlist(w)
-    setEntitlements(e)
-    setLoading(false)
-  }, [])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    let mounted = true
+    const load = async () => {
+      await Promise.all([
+        loadBookings(),
+        loadSessions(),
+        loadStudios(),
+        loadWaitlist(),
+        loadWallet(),
+      ])
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const getSession = (id: string) => sessions.find(s => s.id === id)
   const getStudio = (id: string) => studios.find(s => s.id === id)
-  const getServiceType = (studioId: string, serviceTypeId: string) => {
-    const studio = getStudio(studioId)
-    return studio?.serviceTypes.find(st => st.id === serviceTypeId)
-  }
 
   const now = new Date()
   const upcomingBookings = bookings.filter(b => {
@@ -56,37 +57,34 @@ export default function BookingsPage() {
     return session && (session.date < now || b.status !== 'CONFIRMED')
   })
 
-  const offeredWaitlist = waitlist.filter(w => w.status === 'OFFERED')
+  const offeredWaitlist = waitlistEntries.filter(w => w.status === 'OFFERED')
   const displayBookings = tab === 'upcoming' ? upcomingBookings : pastBookings
 
-  const canCancel = (session: Session): boolean => {
-    const sessionDateTime = new Date(session.date)
-    const [h, m] = session.startTime.split(':').map(Number)
+  const canCancel = (sessionDate: Date, startTime: string): boolean => {
+    const sessionDateTime = new Date(sessionDate)
+    const [h, m] = startTime.split(':').map(Number)
     sessionDateTime.setHours(h, m)
     return differenceInHours(sessionDateTime, now) >= POLICY.cancelCutoffHours
   }
 
   const handleCancel = async (bookingId: string) => {
-    setCancelling(bookingId)
-    const result = await cancel(bookingId)
-    if (result.success) {
-      await loadData()
-    }
-    setCancelling(null)
+    await cancelBooking(bookingId)
   }
 
-  const handleAcceptOffer = async (entry: WaitlistEntry) => {
-    if (entitlements.length === 0) {
+  const handleAcceptOffer = async (entryId: string) => {
+    if (entitlements.length === 0 || entitlements[0].remaining < 1) {
       alert('No credits available. Please purchase a package first.')
       return
     }
-    await waitlistAccept(entry.id, entitlements[0].id)
-    await loadData()
+    await acceptWaitlistOffer(entryId, entitlements[0].id)
   }
 
-  const handleRebook = (session: Session) => {
-    router.push(`/studios/${session.studioId}`)
+  const handleRebook = (studioId: string) => {
+    router.push(`/studios/${studioId}`)
   }
+
+  const isPending = (type: string, id: string) => 
+    pendingOperations.some(op => op.type === type && op.id.includes(id) && op.status === 'pending')
 
   if (loading) return <div className="p-4 text-muted">Loading...</div>
 
@@ -102,6 +100,7 @@ export default function BookingsPage() {
             const session = getSession(entry.sessionId)
             if (!session) return null
             const studio = getStudio(session.studioId)
+            const pending = isPending('waitlist-accept', entry.id)
             return (
               <div key={entry.id} className="flex items-center justify-between">
                 <div>
@@ -110,8 +109,13 @@ export default function BookingsPage() {
                     {format(session.date, 'EEE, MMM d')} at {session.startTime}
                   </p>
                 </div>
-                <Button variant="primary" className="text-sm py-2" onClick={() => handleAcceptOffer(entry)}>
-                  Accept
+                <Button
+                  variant="primary"
+                  className="text-sm py-2"
+                  onClick={() => handleAcceptOffer(entry.id)}
+                  disabled={pending}
+                >
+                  {pending ? 'Accepting...' : 'Accept'}
                 </Button>
               </div>
             )
@@ -140,7 +144,8 @@ export default function BookingsPage() {
             const serviceType = session ? getServiceType(session.studioId, session.serviceTypeId) : null
             if (!session) return null
 
-            const cancelable = booking.status === 'CONFIRMED' && canCancel(session)
+            const cancelable = booking.status === 'CONFIRMED' && canCancel(session.date, session.startTime)
+            const pending = isPending('cancel', booking.id)
 
             return (
               <Card key={booking.id} className="space-y-3">
@@ -173,18 +178,18 @@ export default function BookingsPage() {
                       variant="secondary"
                       className="flex-1 text-sm py-2"
                       onClick={() => handleCancel(booking.id)}
-                      disabled={!cancelable || cancelling === booking.id}
+                      disabled={!cancelable || pending}
                     >
-                      {cancelling === booking.id ? 'Cancelling...' : cancelable ? 'Cancel' : `Cancel (>${POLICY.cancelCutoffHours}h)`}
+                      {pending ? 'Cancelling...' : cancelable ? 'Cancel' : `Cancel (>${POLICY.cancelCutoffHours}h)`}
                     </Button>
                   </div>
                 )}
 
-                {tab === 'past' && booking.status !== 'CONFIRMED' && (
+                {tab === 'past' && booking.status !== 'CONFIRMED' && studio && (
                   <Button
                     variant="ghost"
                     className="w-full text-sm py-2"
-                    onClick={() => handleRebook(session)}
+                    onClick={() => handleRebook(studio.id)}
                   >
                     Rebook
                   </Button>

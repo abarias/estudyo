@@ -1,22 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { getStudios } from '@/lib/api'
+import { useEffect } from 'react'
+import { useStore } from '@/lib/store'
 import { StudioCard } from '@/components/studio'
-import type { Studio } from '@/types/domain'
 
 export default function StudiosPage() {
-  const [studios, setStudios] = useState<Studio[]>([])
-  const [loading, setLoading] = useState(true)
+  const studios = useStore((s) => s.studios)
+  const studiosLoading = useStore((s) => s.studiosLoading)
+  const loadStudios = useStore((s) => s.loadStudios)
 
   useEffect(() => {
-    getStudios().then((data) => {
-      setStudios(data)
-      setLoading(false)
-    })
+    loadStudios()
   }, [])
 
-  if (loading) {
+  if (studiosLoading && studios.length === 0) {
     return <div className="p-4 text-muted">Loading studios...</div>
   }
 

@@ -1,60 +1,65 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { Users, Clock, ChevronRight, AlertCircle } from 'lucide-react'
-import { getSessions, getStudios, getBookings, ownerSimulateSlotOpened, getWaitlistEntries } from '@/lib/api'
+import { useStore } from '@/lib/store'
+import { ownerSimulateSlotOpened } from '@/lib/api'
 import { AttendeeSheet, OwnerSetupPanel } from '@/components/owner'
 import { Card, Button } from '@/components/ui'
-import type { Session, Studio, Booking, WaitlistEntry } from '@/types/domain'
+import type { Session } from '@/types/domain'
 
 export default function OwnerPage() {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [studios, setStudios] = useState<Studio[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
+  const sessions = useStore((s) => s.sessions)
+  const loadSessions = useStore((s) => s.loadSessions)
+  const studios = useStore((s) => s.studios)
+  const loadStudios = useStore((s) => s.loadStudios)
+  const getServiceType = useStore((s) => s.getServiceType)
+  const bookings = useStore((s) => s.bookings)
+  const loadBookings = useStore((s) => s.loadBookings)
+  const waitlistEntries = useStore((s) => s.waitlistEntries)
+  const loadWaitlist = useStore((s) => s.loadWaitlist)
+
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [simulating, setSimulating] = useState<string | null>(null)
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const loadData = useCallback(async () => {
-    const [s, st, b, w] = await Promise.all([
-      getSessions({ date: today }),
-      getStudios(),
-      getBookings('user-1'),
-      getWaitlistEntries('user-1'),
-    ])
-    setSessions(s)
-    setStudios(st)
-    setBookings(b)
-    setWaitlist(w)
-    setLoading(false)
+  const today = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
   }, [])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    let mounted = true
+    const load = async () => {
+      await Promise.all([
+        loadSessions({ date: today }),
+        loadStudios(),
+        loadBookings(),
+        loadWaitlist(),
+      ])
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [today])
 
   const getStudio = (id: string) => studios.find(s => s.id === id)
   const getServiceName = (studioId: string, serviceTypeId: string) => {
-    const studio = getStudio(studioId)
-    return studio?.serviceTypes.find(st => st.id === serviceTypeId)?.name || 'Class'
+    return getServiceType(studioId, serviceTypeId)?.name || 'Class'
   }
   const getServiceColor = (studioId: string, serviceTypeId: string) => {
-    const studio = getStudio(studioId)
-    return studio?.serviceTypes.find(st => st.id === serviceTypeId)?.color || 'muted'
+    return getServiceType(studioId, serviceTypeId)?.color || 'muted'
   }
 
   const getSessionBookings = (sessionId: string) => {
-    return bookings.filter(b => b.sessionId === sessionId)
+    return bookings.filter(b => b.sessionId === sessionId && b.status === 'CONFIRMED')
   }
 
   const getSessionWaitlist = (sessionId: string) => {
-    return waitlist.filter(w => w.sessionId === sessionId && w.status === 'WAITING')
+    return waitlistEntries.filter(w => w.sessionId === sessionId && w.status === 'WAITING')
   }
 
   const handleViewAttendees = (session: Session) => {
@@ -67,10 +72,10 @@ export default function OwnerPage() {
     const entry = await ownerSimulateSlotOpened(sessionId)
     if (entry) {
       alert(`Offer sent to waitlist position ${entry.position}!`)
+      await loadWaitlist()
     } else {
       alert('No one on waitlist')
     }
-    await loadData()
     setSimulating(null)
   }
 
@@ -82,8 +87,7 @@ export default function OwnerPage() {
     alert('Mock: Sessions regenerated')
   }
 
-  // Show offered waitlist entries
-  const offeredEntries = waitlist.filter(w => w.status === 'OFFERED')
+  const offeredEntries = waitlistEntries.filter(w => w.status === 'OFFERED')
 
   if (loading) return <div className="p-4 text-muted">Loading...</div>
 
@@ -92,7 +96,6 @@ export default function OwnerPage() {
       <h1 className="text-xl font-bold text-text">Owner Dashboard</h1>
       <p className="text-muted text-sm">Today&apos;s Sessions - {format(today, 'EEEE, MMM d')}</p>
 
-      {/* Offered waitlist notification */}
       {offeredEntries.length > 0 && (
         <Card className="bg-clay/10 border-clay/30">
           <div className="flex items-start gap-2">

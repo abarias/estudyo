@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { addDays, format, isToday } from 'date-fns'
 
 interface DateStripProps {
@@ -8,9 +9,11 @@ interface DateStripProps {
 }
 
 export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dates = Array.from({ length: 6 }, (_, i) => addDays(today, i))
+  const dates = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Array.from({ length: 6 }, (_, i) => addDays(today, i))
+  }, [])
 
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2 px-4 -mx-4">

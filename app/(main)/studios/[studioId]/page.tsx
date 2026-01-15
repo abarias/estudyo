@@ -2,21 +2,30 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { getStudio, getSessions, getEntitlements, getProducts, book, waitlistJoin, purchaseProduct } from '@/lib/api'
+import { useStore } from '@/lib/store'
 import { DateStrip, SessionCard } from '@/components/studio'
 import { BookingBottomSheet } from '@/components/booking'
 import { Chip } from '@/components/ui'
-import type { Studio, Session, ServiceType, Entitlement, Product } from '@/types/domain'
+import type { Session } from '@/types/domain'
 
 export default function StudioDetailPage() {
   const params = useParams()
   const studioId = params.studioId as string
   
-  const [studio, setStudio] = useState<Studio | null>(null)
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [entitlements, setEntitlements] = useState<Entitlement[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [bookedSessionIds, setBookedSessionIds] = useState<Set<string>>(new Set())
+  const studios = useStore((s) => s.studios)
+  const loadStudios = useStore((s) => s.loadStudios)
+  const getServiceType = useStore((s) => s.getServiceType)
+  const sessions = useStore((s) => s.sessions)
+  const loadSessions = useStore((s) => s.loadSessions)
+  const entitlements = useStore((s) => s.entitlements)
+  const loadWallet = useStore((s) => s.loadWallet)
+  const products = useStore((s) => s.products)
+  const loadProducts = useStore((s) => s.loadProducts)
+  const bookings = useStore((s) => s.bookings)
+  const bookSession = useStore((s) => s.bookSession)
+  const joinWaitlist = useStore((s) => s.joinWaitlist)
+  const purchaseProduct = useStore((s) => s.purchaseProduct)
+
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
@@ -27,27 +36,33 @@ export default function StudioDetailPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const loadData = useCallback(async () => {
-    const [studioData, sessionsData, ents, prods] = await Promise.all([
-      getStudio(studioId),
-      getSessions({ studioId, date: selectedDate }),
-      getEntitlements('user-1'),
-      getProducts(studioId),
-    ])
-    setStudio(studioData)
-    setSessions(sessionsData)
-    setEntitlements(ents)
-    setProducts(prods)
-    setLoading(false)
+  const studio = studios.find(s => s.id === studioId)
+
+  // Initial load
+  useEffect(() => {
+    const load = async () => {
+      await Promise.all([
+        loadStudios(),
+        loadWallet(),
+        loadProducts(studioId),
+      ])
+    }
+    load()
+  }, [studioId])
+
+  // Load sessions when date changes
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      await loadSessions({ studioId, date: selectedDate })
+      setLoading(false)
+    }
+    load()
   }, [studioId, selectedDate])
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  const getServiceType = (id: string): ServiceType | undefined => {
-    return studio?.serviceTypes.find(st => st.id === id)
-  }
+  const bookedSessionIds = new Set(
+    bookings.filter(b => b.status === 'CONFIRMED').map(b => b.sessionId)
+  )
 
   const handleOpenSheet = (session: Session) => {
     setSelectedSession(session)
@@ -56,35 +71,24 @@ export default function StudioDetailPage() {
 
   const handleBook = async (entitlementId: string) => {
     if (!selectedSession) return
-    const result = await book('user-1', selectedSession.id, entitlementId)
-    if ('booking' in result) {
-      setBookedSessionIds(prev => new Set(prev).add(selectedSession.id))
-      await loadData()
-    }
+    return await bookSession(selectedSession.id, entitlementId)
   }
 
   const handleJoinWaitlist = async () => {
     if (!selectedSession) return
-    await waitlistJoin('user-1', selectedSession.id)
-    await loadData()
+    return await joinWaitlist(selectedSession.id)
   }
 
   const handlePurchase = async (productId: string) => {
-    await purchaseProduct('user-1', productId)
-    const ents = await getEntitlements('user-1')
-    setEntitlements(ents)
+    await purchaseProduct(productId)
   }
 
   const filteredSessions = selectedService
     ? sessions.filter(s => s.serviceTypeId === selectedService)
     : sessions
 
-  if (loading) {
-    return <div className="p-4 text-muted">Loading...</div>
-  }
-
   if (!studio) {
-    return <div className="p-4 text-muted">Studio not found</div>
+    return <div className="p-4 text-muted">Loading...</div>
   }
 
   return (
@@ -117,14 +121,16 @@ export default function StudioDetailPage() {
 
       {/* Sessions */}
       <div className="space-y-3">
-        {filteredSessions.length === 0 ? (
+        {loading ? (
+          <p className="text-muted text-sm py-4 text-center">Loading sessions...</p>
+        ) : filteredSessions.length === 0 ? (
           <p className="text-muted text-sm py-4 text-center">No sessions available</p>
         ) : (
           filteredSessions.map((session) => (
             <SessionCard
               key={session.id}
               session={session}
-              serviceType={getServiceType(session.serviceTypeId)}
+              serviceType={getServiceType(session.studioId, session.serviceTypeId)}
               isBooked={bookedSessionIds.has(session.id)}
               onBook={() => handleOpenSheet(session)}
             />
@@ -136,10 +142,10 @@ export default function StudioDetailPage() {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         session={selectedSession}
-        serviceType={selectedSession ? getServiceType(selectedSession.serviceTypeId) : undefined}
+        serviceType={selectedSession ? getServiceType(selectedSession.studioId, selectedSession.serviceTypeId) : undefined}
         studio={studio}
         entitlements={entitlements}
-        products={products}
+        products={products.filter(p => p.studioId === studioId)}
         onBook={handleBook}
         onJoinWaitlist={handleJoinWaitlist}
         onPurchase={handlePurchase}
