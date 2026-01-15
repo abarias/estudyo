@@ -2,12 +2,21 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { Users, Clock, ChevronRight, AlertCircle, RotateCcw, Settings } from 'lucide-react'
+import { Users, Clock, ChevronRight, AlertCircle, RotateCcw, Settings, FlaskConical } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { ownerSimulateSlotOpened } from '@/lib/api'
 import { AttendeeSheet, OwnerSetupPanel } from '@/components/owner'
 import { Card, Button, Banner } from '@/components/ui'
 import type { Session } from '@/types/domain'
+import type { ScenarioId } from '@/lib/store/scenariosSlice'
+
+const SCENARIOS: { id: ScenarioId; name: string }[] = [
+  { id: 1, name: 'Credits Available' },
+  { id: 2, name: 'No Entitlements' },
+  { id: 3, name: 'Full Class + Waitlist' },
+  { id: 4, name: 'Waitlist Offer' },
+  { id: 5, name: 'Locked Cancel' },
+]
 
 export default function OwnerPage() {
   const sessions = useStore((s) => s.sessions)
@@ -89,15 +98,50 @@ export default function OwnerPage() {
 
   const offeredEntries = waitlistEntries.filter(w => w.status === 'OFFERED')
   const activeScenario = useStore((s) => s.activeScenario)
+  const loadScenario = useStore((s) => s.loadScenario)
+  const scenarioLoading = useStore((s) => s.scenarioLoading)
   const resetDemoData = useStore((s) => s.resetDemoData)
+  const [showScenarios, setShowScenarios] = useState(false)
 
   if (loading) return <div className="p-4 text-muted">Loading...</div>
 
   return (
     <div className="p-4 space-y-4">
-      {activeScenario && (
-        <Banner message={`Demo: Scenario ${activeScenario}`} variant="info" />
-      )}
+      {/* Demo Mode Banner */}
+      <div className="bg-sage/10 border border-sage/30 rounded-xl p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FlaskConical size={16} className="text-sage" />
+            <span className="text-sm font-medium text-text">
+              Demo Mode {activeScenario ? `• Scenario ${activeScenario}` : ''}
+            </span>
+          </div>
+          <button
+            onClick={() => setShowScenarios(!showScenarios)}
+            className="text-xs text-sage underline"
+          >
+            {showScenarios ? 'Hide' : 'Change Scenario'}
+          </button>
+        </div>
+        {showScenarios && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SCENARIOS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => loadScenario(s.id)}
+                disabled={scenarioLoading}
+                className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                  activeScenario === s.id
+                    ? 'bg-sage text-white'
+                    : 'bg-border text-muted hover:bg-sage/20'
+                }`}
+              >
+                {s.id}. {s.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-text">Owner Dashboard</h1>
