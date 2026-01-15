@@ -27,6 +27,7 @@ export default function BookingsPage() {
 
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming')
   const [loading, setLoading] = useState(true)
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -69,6 +70,7 @@ export default function BookingsPage() {
 
   const handleCancel = async (bookingId: string) => {
     await cancelBooking(bookingId)
+    setConfirmCancelId(null)
   }
 
   const handleAcceptOffer = async (entryId: string) => {
@@ -173,16 +175,41 @@ export default function BookingsPage() {
                 </div>
 
                 {tab === 'upcoming' && booking.status === 'CONFIRMED' && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      className="flex-1 text-sm py-2"
-                      onClick={() => handleCancel(booking.id)}
-                      disabled={!cancelable || pending}
-                    >
-                      {pending ? 'Cancelling...' : cancelable ? 'Cancel' : `Cancel (>${POLICY.cancelCutoffHours}h)`}
-                    </Button>
-                  </div>
+                  confirmCancelId === booking.id ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-center text-muted">
+                        Are you sure you want to cancel?
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          className="flex-1 text-sm py-2"
+                          onClick={() => setConfirmCancelId(null)}
+                        >
+                          Keep
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="flex-1 text-sm py-2 bg-blush hover:bg-blush/90"
+                          onClick={() => handleCancel(booking.id)}
+                          disabled={pending}
+                        >
+                          {pending ? 'Cancelling...' : 'Yes, Cancel'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        className="flex-1 text-sm py-2"
+                        onClick={() => setConfirmCancelId(booking.id)}
+                        disabled={!cancelable || pending}
+                      >
+                        {pending ? 'Cancelling...' : cancelable ? 'Cancel' : `Cancel (>${POLICY.cancelCutoffHours}h)`}
+                      </Button>
+                    </div>
+                  )
                 )}
 
                 {tab === 'past' && booking.status !== 'CONFIRMED' && studio && (

@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { Users, Clock, ChevronRight, AlertCircle } from 'lucide-react'
+import { Users, Clock, ChevronRight, AlertCircle, RotateCcw, Settings } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { ownerSimulateSlotOpened } from '@/lib/api'
 import { AttendeeSheet, OwnerSetupPanel } from '@/components/owner'
-import { Card, Button } from '@/components/ui'
+import { Card, Button, Banner } from '@/components/ui'
 import type { Session } from '@/types/domain'
 
 export default function OwnerPage() {
@@ -88,12 +88,30 @@ export default function OwnerPage() {
   }
 
   const offeredEntries = waitlistEntries.filter(w => w.status === 'OFFERED')
+  const activeScenario = useStore((s) => s.activeScenario)
+  const resetDemoData = useStore((s) => s.resetDemoData)
 
   if (loading) return <div className="p-4 text-muted">Loading...</div>
 
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-xl font-bold text-text">Owner Dashboard</h1>
+      {activeScenario && (
+        <Banner message={`Demo: Scenario ${activeScenario}`} variant="info" />
+      )}
+
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-text">Owner Dashboard</h1>
+        <div className="flex gap-2">
+          <a href="/owner/setup">
+            <Button variant="ghost" className="px-2">
+              <Settings size={18} />
+            </Button>
+          </a>
+          <Button variant="ghost" className="px-2" onClick={resetDemoData}>
+            <RotateCcw size={18} />
+          </Button>
+        </div>
+      </div>
       <p className="text-muted text-sm">Today&apos;s Sessions - {format(today, 'EEEE, MMM d')}</p>
 
       {offeredEntries.length > 0 && (

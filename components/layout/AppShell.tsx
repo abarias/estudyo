@@ -30,7 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border safe-area-bottom">
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href)

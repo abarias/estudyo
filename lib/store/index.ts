@@ -6,8 +6,10 @@ import { createWalletSlice, WalletSlice } from './walletSlice'
 import { createBookingSlice, BookingSlice } from './bookingSlice'
 import { createNotificationsSlice, NotificationsSlice } from './notificationsSlice'
 import { createDevSlice, DevSlice } from './devSlice'
+import { createSetupSlice, SetupSlice } from './setupSlice'
+import { createScenariosSlice, ScenariosSlice } from './scenariosSlice'
 
-export type AppStore = CatalogSlice & ScheduleSlice & WalletSlice & BookingSlice & NotificationsSlice & DevSlice
+export type AppStore = CatalogSlice & ScheduleSlice & WalletSlice & BookingSlice & NotificationsSlice & DevSlice & SetupSlice & ScenariosSlice
 
 export const useStore = create<AppStore>()(
   devtools(
@@ -18,6 +20,8 @@ export const useStore = create<AppStore>()(
       ...createBookingSlice(...a),
       ...createNotificationsSlice(...a),
       ...createDevSlice(...a),
+      ...createSetupSlice(...a),
+      ...createScenariosSlice(...a),
     }),
     { name: 'estudyo-store' }
   )

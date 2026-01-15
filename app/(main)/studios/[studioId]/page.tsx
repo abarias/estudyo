@@ -22,8 +22,13 @@ export default function StudioDetailPage() {
   const products = useStore((s) => s.products)
   const loadProducts = useStore((s) => s.loadProducts)
   const bookings = useStore((s) => s.bookings)
+  const loadBookings = useStore((s) => s.loadBookings)
+  const waitlistEntries = useStore((s) => s.waitlistEntries)
+  const loadWaitlist = useStore((s) => s.loadWaitlist)
   const bookSession = useStore((s) => s.bookSession)
+  const cancelBooking = useStore((s) => s.cancelBooking)
   const joinWaitlist = useStore((s) => s.joinWaitlist)
+  const acceptWaitlistOffer = useStore((s) => s.acceptWaitlistOffer)
   const purchaseProduct = useStore((s) => s.purchaseProduct)
 
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -45,6 +50,8 @@ export default function StudioDetailPage() {
         loadStudios(),
         loadWallet(),
         loadProducts(studioId),
+        loadBookings(),
+        loadWaitlist(),
       ])
     }
     load()
@@ -79,9 +86,26 @@ export default function StudioDetailPage() {
     return await joinWaitlist(selectedSession.id)
   }
 
+  const handleCancel = async (bookingId: string) => {
+    return await cancelBooking(bookingId)
+  }
+
+  const handleAcceptOffer = async (entryId: string, entitlementId: string) => {
+    return await acceptWaitlistOffer(entryId, entitlementId)
+  }
+
   const handlePurchase = async (productId: string) => {
     await purchaseProduct(productId)
   }
+
+  // Get user's booking and waitlist entry for selected session
+  const userBooking = selectedSession 
+    ? bookings.find(b => b.sessionId === selectedSession.id && b.status === 'CONFIRMED')
+    : undefined
+
+  const userWaitlistEntry = selectedSession
+    ? waitlistEntries.find(w => w.sessionId === selectedSession.id && (w.status === 'WAITING' || w.status === 'OFFERED'))
+    : undefined
 
   const filteredSessions = selectedService
     ? sessions.filter(s => s.serviceTypeId === selectedService)
@@ -146,8 +170,12 @@ export default function StudioDetailPage() {
         studio={studio}
         entitlements={entitlements}
         products={products.filter(p => p.studioId === studioId)}
+        userBooking={userBooking}
+        userWaitlistEntry={userWaitlistEntry}
         onBook={handleBook}
+        onCancel={handleCancel}
         onJoinWaitlist={handleJoinWaitlist}
+        onAcceptOffer={handleAcceptOffer}
         onPurchase={handlePurchase}
       />
     </div>

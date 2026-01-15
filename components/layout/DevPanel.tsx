@@ -2,16 +2,18 @@
 
 import { useState } from 'react'
 import { Settings, X } from 'lucide-react'
-import { useDev } from '@/lib/store'
+import { useStore } from '@/lib/store'
 
 export default function DevPanel() {
   const [open, setOpen] = useState(false)
-  const {
-    simulateLatency, setSimulateLatency,
-    simulateFailures, setSimulateFailures,
-    latencyMs, setLatencyMs,
-    failureRate, setFailureRate,
-  } = useDev()
+  const simulateLatency = useStore((s) => s.simulateLatency)
+  const setSimulateLatency = useStore((s) => s.setSimulateLatency)
+  const simulateFailures = useStore((s) => s.simulateFailures)
+  const setSimulateFailures = useStore((s) => s.setSimulateFailures)
+  const latencyMs = useStore((s) => s.latencyMs)
+  const setLatencyMs = useStore((s) => s.setLatencyMs)
+  const failureRate = useStore((s) => s.failureRate)
+  const setFailureRate = useStore((s) => s.setFailureRate)
 
   return (
     <>
