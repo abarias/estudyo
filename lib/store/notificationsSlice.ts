@@ -17,7 +17,7 @@ export const createNotificationsSlice: StateCreator<AppStore, [], [], Notificati
   loadNotifications: async () => {
     set({ notificationsLoading: true })
     try {
-      const notifications = await withDevSimulation(get(), () => api.getNotifications('user-1'))
+      const notifications = await withDevSimulation(get(), () => api.getNotifications(get().userId))
       set({ notifications, notificationsLoading: false })
     } catch {
       set({ notificationsLoading: false })

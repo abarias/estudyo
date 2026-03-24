@@ -24,7 +24,7 @@ export const createWalletSlice: StateCreator<AppStore, [], [], WalletSlice> = (s
   loadWallet: async () => {
     set({ walletLoading: true })
     try {
-      const wallet = await withDevSimulation(get(), () => api.getWallet('user-1'))
+      const wallet = await withDevSimulation(get(), () => api.getWallet(get().userId))
       set({
         entitlements: wallet.entitlements,
         totalCredits: wallet.totalCredits,
@@ -46,7 +46,7 @@ export const createWalletSlice: StateCreator<AppStore, [], [], WalletSlice> = (s
 
   purchaseProduct: async (productId) => {
     try {
-      const result = await withDevSimulation(get(), () => api.purchaseProduct('user-1', productId))
+      const result = await withDevSimulation(get(), () => api.purchaseProduct(get().userId, productId))
       if (result.success) {
         await get().loadWallet()
         return true

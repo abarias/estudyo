@@ -36,7 +36,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
   loadBookings: async () => {
     set({ bookingsLoading: true })
     try {
-      const bookings = await withDevSimulation(get(), () => api.getBookings('user-1'))
+      const bookings = await withDevSimulation(get(), () => api.getBookings(get().userId))
       set({ bookings, bookingsLoading: false })
     } catch {
       set({ bookingsLoading: false })
@@ -45,7 +45,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
 
   loadWaitlist: async () => {
     try {
-      const waitlistEntries = await withDevSimulation(get(), () => api.getWaitlistEntries('user-1'))
+      const waitlistEntries = await withDevSimulation(get(), () => api.getWaitlistEntries(get().userId))
       set({ waitlistEntries })
     } catch {
       // ignore
@@ -65,7 +65,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
     get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining - 1 })
 
     try {
-      const result = await withDevSimulation(get(), () => api.book('user-1', sessionId, entitlementId))
+      const result = await withDevSimulation(get(), () => api.book(get().userId, sessionId, entitlementId))
       
       if ('error' in result) {
         // Rollback
@@ -157,7 +157,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
     }
 
     try {
-      const result = await withDevSimulation(get(), () => api.waitlistJoin('user-1', sessionId))
+      const result = await withDevSimulation(get(), () => api.waitlistJoin(get().userId, sessionId))
       
       if ('error' in result) {
         if (session) {

@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Calendar, Settings } from 'lucide-react'
+import { MapPin, Calendar, Settings, LogOut, LogIn } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
 
 const navItems = [
   { href: '/studios', label: 'Studios', icon: MapPin },
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
@@ -21,6 +23,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/" className="text-lg font-bold text-text">
             Estudyo
           </Link>
+          {session ? (
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="flex items-center gap-1.5 text-xs text-muted hover:text-text transition-colors"
+            >
+              {session.user.image && (
+                <img src={session.user.image} alt="" className="w-6 h-6 rounded-full" />
+              )}
+              <LogOut size={14} />
+            </button>
+          ) : (
+            <Link href="/" className="flex items-center gap-1 text-xs text-muted hover:text-text transition-colors">
+              <LogIn size={14} />
+              <span>Sign in</span>
+            </Link>
+          )}
         </div>
       </header>
 

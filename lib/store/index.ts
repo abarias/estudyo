@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
+import { devtools, persist } from 'zustand/middleware'
 import { createCatalogSlice, CatalogSlice } from './catalogSlice'
 import { createScheduleSlice, ScheduleSlice } from './scheduleSlice'
 import { createWalletSlice, WalletSlice } from './walletSlice'
@@ -8,21 +8,39 @@ import { createNotificationsSlice, NotificationsSlice } from './notificationsSli
 import { createDevSlice, DevSlice } from './devSlice'
 import { createSetupSlice, SetupSlice } from './setupSlice'
 import { createScenariosSlice, ScenariosSlice } from './scenariosSlice'
+import { createAuthSlice, AuthSlice } from './authSlice'
 
-export type AppStore = CatalogSlice & ScheduleSlice & WalletSlice & BookingSlice & NotificationsSlice & DevSlice & SetupSlice & ScenariosSlice
+export type AppStore = AuthSlice & CatalogSlice & ScheduleSlice & WalletSlice & BookingSlice & NotificationsSlice & DevSlice & SetupSlice & ScenariosSlice
 
 export const useStore = create<AppStore>()(
   devtools(
-    (...a) => ({
-      ...createCatalogSlice(...a),
-      ...createScheduleSlice(...a),
-      ...createWalletSlice(...a),
-      ...createBookingSlice(...a),
-      ...createNotificationsSlice(...a),
-      ...createDevSlice(...a),
-      ...createSetupSlice(...a),
-      ...createScenariosSlice(...a),
-    }),
+    persist(
+      (...a) => ({
+        ...createAuthSlice(...a),
+        ...createCatalogSlice(...a),
+        ...createScheduleSlice(...a),
+        ...createWalletSlice(...a),
+        ...createBookingSlice(...a),
+        ...createNotificationsSlice(...a),
+        ...createDevSlice(...a),
+        ...createSetupSlice(...a),
+        ...createScenariosSlice(...a),
+      }),
+      {
+        name: 'estudyo-store',
+        // Only persist auth identity + wallet + bookings
+        partialize: (state) => ({
+          userId: state.userId,
+          userName: state.userName,
+          userEmail: state.userEmail,
+          userImage: state.userImage,
+          entitlements: state.entitlements,
+          totalCredits: state.totalCredits,
+          bookings: state.bookings,
+          waitlistEntries: state.waitlistEntries,
+        }),
+      }
+    ),
     { name: 'estudyo-store' }
   )
 )
