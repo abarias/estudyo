@@ -125,7 +125,7 @@ export default function StudioMap({ studios }: Props) {
         style={{ width: '100%', height: '100%' }}
         defaultCenter={MANILA_CENTER}
         defaultZoom={DEFAULT_ZOOM}
-        mapId="estudyo-studios-map"
+        mapId="1bfa7673bcb65ded878640d4"
         gestureHandling="greedy"
         disableDefaultUI
         zoomControl
