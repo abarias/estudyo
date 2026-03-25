@@ -42,6 +42,7 @@ export const studios: Studio[] = [
     name: 'Galaw BGC',
     description: 'Premium movement studio in the heart of Bonifacio Global City.',
     address: '4F High Street South Corporate Plaza, BGC, Taguig',
+    coordinates: { lat: 14.5503, lng: 121.0494 },
     ownerId: 'owner-1',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-1'),
     rooms: [
@@ -55,6 +56,7 @@ export const studios: Studio[] = [
     name: 'Anino Wellness',
     description: 'Your sanctuary for mindful movement in Ortigas.',
     address: '3F Estancia Mall, Capitol Commons, Pasig',
+    coordinates: { lat: 14.5872, lng: 121.0716 },
     ownerId: 'owner-2',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-2'),
     rooms: [

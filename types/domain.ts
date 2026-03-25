@@ -25,12 +25,18 @@ export interface InstructorProfile {
 }
 
 // ========== STUDIO & ROOMS ==========
+export interface Coordinates {
+  lat: number
+  lng: number
+}
+
 export interface Studio {
   id: string
   name: string
   description: string
   address: string
   imageUrl?: string
+  coordinates?: Coordinates
   ownerId: string
   serviceTypes: ServiceType[]
   rooms: Room[]
