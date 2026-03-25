@@ -20,9 +20,9 @@ function getBaseStudios(): Studio[] {
   return [
     {
       id: 'studio-1',
-      name: 'Serenity Studio',
-      description: 'A calm space for mindful movement.',
-      address: '123 Wellness Ave, Downtown',
+      name: 'Galaw BGC',
+      description: 'Premium movement studio in the heart of Bonifacio Global City.',
+      address: '4F High Street South Corporate Plaza, BGC, Taguig',
       ownerId: 'owner-1',
       serviceTypes: [
         { id: 'st-1', studioId: 'studio-1', name: 'Mat Pilates', description: 'Core strength', color: 'sage', durationMinutes: 55 },
@@ -40,9 +40,9 @@ function getBaseStudios(): Studio[] {
 
 function getBaseProducts(): Product[] {
   return [
-    { id: 'prod-1', studioId: 'studio-1', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single pass', price: 25, validDays: 30 },
-    { id: 'prod-2', studioId: 'studio-1', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Save 15%', price: 106, credits: 5, validDays: 60 },
-    { id: 'prod-3', studioId: 'studio-1', type: 'CREDIT_PACK', name: '10 Class Pack', description: 'Save 20%', price: 200, credits: 10, validDays: 90 },
+    { id: 'prod-1', studioId: 'studio-1', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single pass', price: 750, validDays: 30 },
+    { id: 'prod-2', studioId: 'studio-1', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Save 15%', price: 3200, credits: 5, validDays: 60 },
+    { id: 'prod-3', studioId: 'studio-1', type: 'CREDIT_PACK', name: '10 Class Pack', description: 'Save 20%', price: 6000, credits: 10, validDays: 90 },
   ]
 }
 

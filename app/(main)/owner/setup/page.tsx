@@ -299,7 +299,7 @@ export default function OwnerSetupPage() {
                 />
                 <Input
                   type="number"
-                  placeholder="Price ($)"
+                  placeholder="Price (₱)"
                   value={prodPrice}
                   onChange={(e) => setProdPrice(e.target.value)}
                 />
@@ -336,7 +336,7 @@ export default function OwnerSetupPage() {
                 <div>
                   <p className="font-medium text-text">{prod.name}</p>
                   <p className="text-sm text-muted">
-                    ${prod.price}
+                    ₱{prod.price.toLocaleString()}
                     {prod.credits && ` • ${prod.credits} credits`}
                     {prod.sessions && ` • ${prod.sessions} sessions`}
                   </p>

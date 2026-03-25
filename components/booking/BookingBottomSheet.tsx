@@ -231,7 +231,7 @@ export default function BookingBottomSheet({
                   <p className="font-semibold text-text">{product.name}</p>
                   <p className="text-sm text-muted">{product.description}</p>
                 </div>
-                <span className="font-semibold text-sage">${product.price}</span>
+                <span className="font-semibold text-sage">₱{product.price.toLocaleString()}</span>
               </div>
             </Card>
           ))}

@@ -32,16 +32,16 @@ const serviceTypesSeed: ServiceType[] = [
   { id: 'st-3', studioId: 'studio-1', name: 'Vinyasa Yoga', description: 'Dynamic flow yoga', color: 'blush', durationMinutes: 60 },
   { id: 'st-4', studioId: 'studio-2', name: 'Yin Yoga', description: 'Deep stretch and relaxation', color: 'sky', durationMinutes: 75 },
   { id: 'st-5', studioId: 'studio-2', name: 'Power Yoga', description: 'Strength-building yoga', color: 'sage', durationMinutes: 60 },
-  { id: 'st-6', studioId: 'studio-2', name: 'Mat Pilates', description: 'Core work and posture', color: 'clay', durationMinutes: 55 },
+  { id: 'st-6', studioId: 'studio-2', name: 'Barre', description: 'Ballet-inspired toning and endurance', color: 'clay', durationMinutes: 55 },
 ]
 
 // Studios with rooms
 export const studios: Studio[] = [
   {
     id: 'studio-1',
-    name: 'Serenity Studio',
-    description: 'A calm space for mindful movement in the heart of the city.',
-    address: '123 Wellness Ave, Downtown',
+    name: 'Galaw BGC',
+    description: 'Premium movement studio in the heart of Bonifacio Global City.',
+    address: '4F High Street South Corporate Plaza, BGC, Taguig',
     ownerId: 'owner-1',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-1'),
     rooms: [
@@ -52,9 +52,9 @@ export const studios: Studio[] = [
   },
   {
     id: 'studio-2',
-    name: 'Flow & Balance',
-    description: 'Your journey to wellness starts here.',
-    address: '456 Harmony St, Westside',
+    name: 'Anino Wellness',
+    description: 'Your sanctuary for mindful movement in Ortigas.',
+    address: '3F Estancia Mall, Capitol Commons, Pasig',
     ownerId: 'owner-2',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-2'),
     rooms: [
@@ -123,13 +123,13 @@ function seedWaitlist(): WaitlistEntry[] {
   ]
 }
 
-// Products
+// Products (prices in Philippine Peso)
 export const products: Product[] = [
-  { id: 'prod-1', studioId: 'studio-1', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single session pass', price: 25, validDays: 30 },
-  { id: 'prod-2', studioId: 'studio-1', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Save 15% on 5 classes', price: 106, credits: 5, validDays: 60 },
-  { id: 'prod-3', studioId: 'studio-1', type: 'CREDIT_PACK', name: '10 Class Pack', description: 'Save 20% on 10 classes', price: 200, credits: 10, validDays: 90 },
-  { id: 'prod-4', studioId: 'studio-2', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single session pass', price: 22, validDays: 30 },
-  { id: 'prod-5', studioId: 'studio-2', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Best value for regulars', price: 95, credits: 5, validDays: 60 },
+  { id: 'prod-1', studioId: 'studio-1', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single session pass', price: 750, validDays: 30 },
+  { id: 'prod-2', studioId: 'studio-1', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Save 15% on 5 classes', price: 3200, credits: 5, validDays: 60 },
+  { id: 'prod-3', studioId: 'studio-1', type: 'CREDIT_PACK', name: '10 Class Pack', description: 'Save 20% on 10 classes', price: 6000, credits: 10, validDays: 90 },
+  { id: 'prod-4', studioId: 'studio-2', type: 'SINGLE_SESSION', name: 'Drop-in Class', description: 'Single session pass', price: 650, validDays: 30 },
+  { id: 'prod-5', studioId: 'studio-2', type: 'CREDIT_PACK', name: '5 Class Pack', description: 'Best value for regulars', price: 2750, credits: 5, validDays: 60 },
 ]
 
 // Initial entitlements (wallet)
