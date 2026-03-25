@@ -9,6 +9,7 @@ import { createDevSlice, DevSlice } from './devSlice'
 import { createSetupSlice, SetupSlice } from './setupSlice'
 import { createScenariosSlice, ScenariosSlice } from './scenariosSlice'
 import { createAuthSlice, AuthSlice } from './authSlice'
+import { rehydrateMockStore } from '@/lib/mockStore'
 
 export type AppStore = AuthSlice & CatalogSlice & ScheduleSlice & WalletSlice & BookingSlice & NotificationsSlice & DevSlice & SetupSlice & ScenariosSlice
 
@@ -39,6 +40,17 @@ export const useStore = create<AppStore>()(
           bookings: state.bookings,
           waitlistEntries: state.waitlistEntries,
         }),
+        onRehydrateStorage: () => (state) => {
+          if (!state) return
+          // Restore persisted data back into the in-memory mock store so that
+          // subsequent API calls (loadBookings, loadWallet, etc.) return the
+          // correct data instead of empty arrays.
+          rehydrateMockStore({
+            bookings: state.bookings,
+            entitlements: state.entitlements,
+            waitlistEntries: state.waitlistEntries,
+          })
+        },
       }
     ),
     { name: 'estudyo-store' }

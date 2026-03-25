@@ -325,6 +325,55 @@ export function acceptWaitlistOffer(entryId: string, entitlementId: string): { b
   return { booking }
 }
 
+// ========== REHYDRATION ==========
+// Restores persisted Zustand state back into the in-memory mock store after
+// a page reload, so API calls return the correct data rather than empty arrays.
+export function rehydrateMockStore(opts: {
+  bookings?: Booking[]
+  entitlements?: Entitlement[]
+  waitlistEntries?: WaitlistEntry[]
+}) {
+  if (opts.bookings?.length) {
+    // Merge: keep any new mock bookings, add back persisted ones that aren't already present
+    const existingIds = new Set(bookings.map((b) => b.id))
+    for (const b of opts.bookings) {
+      if (!existingIds.has(b.id)) bookings.push(b)
+    }
+    // Sync bookedCount on sessions
+    for (const b of bookings) {
+      if (b.status === 'CONFIRMED') {
+        const session = sessions.find((s) => s.id === b.sessionId)
+        if (session) {
+          const confirmedCount = bookings.filter(
+            (x) => x.sessionId === b.sessionId && x.status === 'CONFIRMED'
+          ).length
+          session.bookedCount = Math.max(session.bookedCount, confirmedCount)
+        }
+      }
+    }
+  }
+
+  if (opts.entitlements?.length) {
+    const existingIds = new Set(entitlements.map((e) => e.id))
+    for (const e of opts.entitlements) {
+      if (!existingIds.has(e.id)) {
+        entitlements.push(e)
+      } else {
+        // Update remaining credits to match persisted value
+        const existing = entitlements.find((x) => x.id === e.id)
+        if (existing) existing.remaining = e.remaining
+      }
+    }
+  }
+
+  if (opts.waitlistEntries?.length) {
+    const existingIds = new Set(waitlistEntries.map((w) => w.id))
+    for (const w of opts.waitlistEntries) {
+      if (!existingIds.has(w.id)) waitlistEntries.push(w)
+    }
+  }
+}
+
 // ========== HELPERS ==========
 export function getServiceType(id: string): ServiceType | undefined {
   for (const studio of studios) {
