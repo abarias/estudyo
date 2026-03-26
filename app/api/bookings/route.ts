@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { getAuthUserId } from '@/lib/session'
 import { sessions } from '@/lib/mockStore'
-import { addDays } from 'date-fns'
 import { POLICY } from '@/lib/mockStore'
 
 // GET /api/bookings — list all bookings for the authenticated user
@@ -36,7 +35,6 @@ export async function POST(req: NextRequest) {
   const entitlement = await db.entitlement.findFirst({
     where: { id: entitlementId, userId, remaining: { gt: 0 } },
   })
-  console.log('[POST /api/bookings] userId:', userId, 'entitlementId:', entitlementId, 'found:', !!entitlement)
   if (!entitlement) return Response.json({ error: 'No valid entitlement' }, { status: 400 })
 
   // Check capacity: count existing confirmed bookings for this session
@@ -57,22 +55,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Create booking + decrement entitlement in a transaction
-  let booking
-  try {
-    const result = await db.$transaction([
-      db.booking.create({
-        data: { userId, sessionId, status: 'CONFIRMED' },
-      }),
-      db.entitlement.update({
-        where: { id: entitlementId },
-        data: { remaining: { decrement: 1 } },
-      }),
-    ])
-    booking = result[0]
-  } catch (err) {
-    console.error('[POST /api/bookings] transaction error:', err)
-    return Response.json({ error: 'Transaction failed', detail: String(err) }, { status: 500 })
-  }
+  const [booking] = await db.$transaction([
+    db.booking.create({
+      data: { userId, sessionId, status: 'CONFIRMED' },
+    }),
+    db.entitlement.update({
+      where: { id: entitlementId },
+      data: { remaining: { decrement: 1 } },
+    }),
+  ])
 
   return Response.json(booking, { status: 201 })
 }
