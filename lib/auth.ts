@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import FacebookProvider from 'next-auth/providers/facebook'
+import { db } from '@/lib/db'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,8 +18,26 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
+    async signIn({ user }) {
+      if (!user.email) return false
+      // Upsert user into DB so FK constraints on Booking/Entitlement work
+      const dbUser = await db.user.upsert({
+        where: { email: user.email },
+        create: {
+          email: user.email,
+          name: user.name ?? '',
+          image: user.image ?? null,
+        },
+        update: {
+          name: user.name ?? '',
+          image: user.image ?? null,
+        },
+      })
+      // Override user.id with the DB cuid so jwt callback stores the right id
+      user.id = dbUser.id
+      return true
+    },
     jwt({ token, user }) {
-      // Persist user id and role into the JWT on first sign-in
       if (user) {
         token.id = user.id
         token.role = (user as any).role ?? 'CUSTOMER'
