@@ -6,6 +6,7 @@ import { Users, Clock, ChevronRight, AlertCircle, RotateCcw, Settings, FlaskConi
 import { useStore } from '@/lib/store'
 import { ownerSimulateSlotOpened } from '@/lib/api'
 import { AttendeeSheet, OwnerSetupPanel } from '@/components/owner'
+import { DateStrip } from '@/components/studio'
 import { Card, Button, Banner } from '@/components/ui'
 import type { Session } from '@/types/domain'
 import type { ScenarioId } from '@/lib/store/scenariosSlice'
@@ -40,11 +41,13 @@ export default function OwnerPage() {
     return d
   }, [])
 
+  const [selectedDate, setSelectedDate] = useState<Date>(today)
+
   useEffect(() => {
     let mounted = true
     const load = async () => {
       await Promise.all([
-        loadSessions({ date: today }),
+        loadSessions({ date: selectedDate }),
         loadStudios(),
         loadBookings(),
         loadWaitlist(),
@@ -53,7 +56,7 @@ export default function OwnerPage() {
     }
     load()
     return () => { mounted = false }
-  }, [today])
+  }, [selectedDate])
 
   const getStudio = (id: string) => studios.find(s => s.id === id)
   const getServiceName = (studioId: string, serviceTypeId: string) => {
@@ -156,7 +159,13 @@ export default function OwnerPage() {
           </Button>
         </div>
       </div>
-      <p className="text-muted text-sm">Today&apos;s Sessions - {format(today, 'EEEE, MMM d')}</p>
+      <DateStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+
+      <p className="text-muted text-sm">
+        {selectedDate.toDateString() === today.toDateString()
+          ? `Today — ${format(selectedDate, 'EEEE, MMM d')}`
+          : format(selectedDate, 'EEEE, MMM d')}
+      </p>
 
       {offeredEntries.length > 0 && (
         <Card className="bg-clay/10 border-clay/30">
