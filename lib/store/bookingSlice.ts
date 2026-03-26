@@ -71,7 +71,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
         // Rollback
         get().updateSessionOptimistic(sessionId, { bookedCount: session.bookedCount })
         get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
-        get().updatePendingOperation(opId, 'error', result.error)
+        get().updatePendingOperation(opId, 'error', result.error as string)
         setTimeout(() => get().removePendingOperation(opId), 3000)
         return false
       }
@@ -163,7 +163,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
         if (session) {
           get().updateSessionOptimistic(sessionId, { waitlistCount: session.waitlistCount })
         }
-        get().updatePendingOperation(opId, 'error', result.error)
+        get().updatePendingOperation(opId, 'error', result.error as string)
         setTimeout(() => get().removePendingOperation(opId), 3000)
         return false
       }
@@ -210,7 +210,7 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
           ),
         }))
         get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
-        get().updatePendingOperation(opId, 'error', result.error)
+        get().updatePendingOperation(opId, 'error', result.error as string)
         setTimeout(() => get().removePendingOperation(opId), 3000)
         return false
       }

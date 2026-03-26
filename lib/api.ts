@@ -1,19 +1,13 @@
 import {
-  studios, sessions, products, currentUser,
-  getUserEntitlements, getUserBookings, getServiceType, getRoom,
-  bookSession, cancelBooking, joinWaitlist, acceptWaitlistOffer, offerWaitlistSpot,
-  waitlistEntries, notificationEvents, addEntitlement,
+  studios, sessions, products,
+  getServiceType, getRoom,
+  offerWaitlistSpot,
+  notificationEvents,
 } from './mockStore'
 import type { Studio, Session, Product, Entitlement, Booking, WaitlistEntry, NotificationEvent } from '@/types/domain'
 
-// Simulate network delay
+// Simulate network delay (used for mock-only calls)
 const delay = (ms: number = 200) => new Promise(resolve => setTimeout(resolve, ms))
-
-// ========== USER ==========
-export async function getMe() {
-  await delay(100)
-  return currentUser
-}
 
 // ========== STUDIOS ==========
 export async function getStudios(): Promise<Studio[]> {
@@ -37,7 +31,7 @@ export async function getServices(studioId: string) {
 export async function getSessions(filters?: { studioId?: string; date?: Date; serviceTypeId?: string }): Promise<Session[]> {
   await delay()
   let result = [...sessions]
-  
+
   if (filters?.studioId) {
     result = result.filter(s => s.studioId === filters.studioId)
   }
@@ -48,7 +42,7 @@ export async function getSessions(filters?: { studioId?: string; date?: Date; se
   if (filters?.serviceTypeId) {
     result = result.filter(s => s.serviceTypeId === filters.serviceTypeId)
   }
-  
+
   return result.sort((a, b) => {
     if (a.date.getTime() !== b.date.getTime()) return a.date.getTime() - b.date.getTime()
     return a.startTime.localeCompare(b.startTime)
@@ -64,11 +58,11 @@ export async function getSessionDetails(sessionId: string) {
   await delay()
   const session = sessions.find(s => s.id === sessionId)
   if (!session) return null
-  
+
   const studio = studios.find(s => s.id === session.studioId)
   const serviceType = getServiceType(session.serviceTypeId)
   const room = getRoom(session.studioId, session.roomId)
-  
+
   return { session, studio, serviceType, room }
 }
 
@@ -80,60 +74,81 @@ export async function getProducts(studioId?: string): Promise<Product[]> {
 }
 
 // ========== WALLET & ENTITLEMENTS ==========
-export async function getWallet(userId: string) {
-  await delay()
-  const ents = getUserEntitlements(userId)
-  const totalCredits = ents.reduce((sum, e) => sum + e.remaining, 0)
-  return { entitlements: ents, totalCredits }
+export async function getWallet(_userId: string) {
+  const res = await fetch('/api/wallet')
+  if (!res.ok) throw new Error('Failed to fetch wallet')
+  return res.json() as Promise<{ entitlements: Entitlement[]; totalCredits: number }>
 }
 
-export async function getEntitlements(userId: string): Promise<Entitlement[]> {
-  await delay()
-  return getUserEntitlements(userId)
+export async function getEntitlements(_userId: string): Promise<Entitlement[]> {
+  const { entitlements } = await getWallet(_userId)
+  return entitlements
 }
 
 // ========== BOOKINGS ==========
-export async function book(userId: string, sessionId: string, entitlementId: string) {
-  await delay(300)
-  return bookSession(userId, sessionId, entitlementId)
+export async function book(_userId: string, sessionId: string, entitlementId: string) {
+  const res = await fetch('/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, entitlementId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Booking failed')
+  return data as Booking
 }
 
 export async function cancel(bookingId: string) {
-  await delay(300)
-  return cancelBooking(bookingId)
+  const res = await fetch(`/api/bookings/${bookingId}`, { method: 'PATCH' })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Cancel failed')
+  return data
 }
 
-export async function getBookings(userId: string): Promise<Booking[]> {
-  await delay()
-  return getUserBookings(userId)
+export async function getBookings(_userId: string): Promise<Booking[]> {
+  const res = await fetch('/api/bookings')
+  if (!res.ok) throw new Error('Failed to fetch bookings')
+  return res.json()
 }
 
 export async function getBookingWithSession(bookingId: string) {
-  await delay()
-  const booking = getUserBookings(currentUser.id).find(b => b.id === bookingId)
+  const bookings = await getBookings('')
+  const booking = bookings.find(b => b.id === bookingId)
   if (!booking) return null
-  
+
   const session = sessions.find(s => s.id === booking.sessionId)
   const serviceType = session ? getServiceType(session.serviceTypeId) : undefined
   const studio = session ? studios.find(s => s.id === session.studioId) : undefined
-  
+
   return { booking, session, serviceType, studio }
 }
 
 // ========== WAITLIST ==========
-export async function waitlistJoin(userId: string, sessionId: string) {
-  await delay(300)
-  return joinWaitlist(userId, sessionId)
+export async function waitlistJoin(_userId: string, sessionId: string) {
+  const res = await fetch('/api/waitlist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Join waitlist failed')
+  return data as WaitlistEntry
 }
 
 export async function waitlistAccept(entryId: string, entitlementId: string) {
-  await delay(300)
-  return acceptWaitlistOffer(entryId, entitlementId)
+  const res = await fetch(`/api/waitlist/${entryId}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entitlementId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Accept offer failed')
+  return data as Booking
 }
 
-export async function getWaitlistEntries(userId: string): Promise<WaitlistEntry[]> {
-  await delay()
-  return waitlistEntries.filter(w => w.userId === userId)
+export async function getWaitlistEntries(_userId: string): Promise<WaitlistEntry[]> {
+  const res = await fetch('/api/waitlist')
+  if (!res.ok) throw new Error('Failed to fetch waitlist')
+  return res.json()
 }
 
 // ========== NOTIFICATIONS ==========
@@ -144,10 +159,8 @@ export async function getNotifications(userId: string): Promise<NotificationEven
 
 // ========== OWNER APIs ==========
 export async function getSessionAttendees(sessionId: string) {
-  await delay()
-  const sessionBookings = getUserBookings(currentUser.id) // In real app, get all bookings for session
-  // Mock: return bookings for this session
-  return sessionBookings.filter(b => b.sessionId === sessionId && b.status === 'CONFIRMED')
+  const bookings = await getBookings('')
+  return bookings.filter(b => b.sessionId === sessionId && b.status === 'CONFIRMED')
 }
 
 export async function ownerSimulateSlotOpened(sessionId: string) {
@@ -155,8 +168,13 @@ export async function ownerSimulateSlotOpened(sessionId: string) {
   return offerWaitlistSpot(sessionId)
 }
 
-export async function purchaseProduct(userId: string, productId: string) {
-  await delay(500)
-  const entitlement = addEntitlement(userId, productId)
-  return { success: true, entitlement }
+export async function purchaseProduct(_userId: string, productId: string) {
+  const res = await fetch('/api/wallet/purchase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Purchase failed')
+  return data as { success: boolean; entitlement: Entitlement }
 }
