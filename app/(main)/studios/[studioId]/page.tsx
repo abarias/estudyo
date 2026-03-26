@@ -34,6 +34,12 @@ export default function StudioDetailPage() {
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
+    // If all of today's sessions (07:00-12:00) are past the booking cutoff, start on tomorrow
+    const lastTodaySession = new Date(d)
+    lastTodaySession.setHours(12, 0)
+    if ((lastTodaySession.getTime() - Date.now()) / 60000 < 60) {
+      d.setDate(d.getDate() + 1)
+    }
     return d
   })
   const [selectedService, setSelectedService] = useState<string | null>(null)
@@ -107,9 +113,17 @@ export default function StudioDetailPage() {
     ? waitlistEntries.find(w => w.sessionId === selectedSession.id && (w.status === 'WAITING' || w.status === 'OFFERED'))
     : undefined
 
-  const filteredSessions = selectedService
-    ? sessions.filter(s => s.serviceTypeId === selectedService)
-    : sessions
+  const now = Date.now()
+  const bookableSessions = sessions.filter(s => {
+    const dt = new Date(s.date)
+    const [h, m] = s.startTime.split(':').map(Number)
+    dt.setHours(h, m)
+    return (dt.getTime() - now) / 60000 > 60 // POLICY.bookingCutoffMinutes
+  })
+
+  const filteredSessions = (selectedService
+    ? bookableSessions.filter(s => s.serviceTypeId === selectedService)
+    : bookableSessions)
 
   if (!studio) {
     return <div className="p-4 text-muted">Loading...</div>

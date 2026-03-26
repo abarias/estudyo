@@ -85,7 +85,8 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
       // Rollback
       get().updateSessionOptimistic(sessionId, { bookedCount: session.bookedCount })
       get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
-      get().updatePendingOperation(opId, 'error', 'Network error')
+      const msg = e instanceof Error ? e.message : 'Network error'
+      get().updatePendingOperation(opId, 'error', msg)
       setTimeout(() => get().removePendingOperation(opId), 3000)
       return false
     }
