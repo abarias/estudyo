@@ -18,9 +18,8 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.email) return false
-      // Upsert user into DB so FK constraints on Booking/Entitlement work
       const dbUser = await db.user.upsert({
         where: { email: user.email },
         create: {
@@ -33,21 +32,27 @@ export const authOptions: NextAuthOptions = {
           image: user.image ?? null,
         },
       })
-      // Override user.id with the DB cuid so jwt callback stores the right id
       user.id = dbUser.id
+      ;(user as any).role = dbUser.role
+      ;(user as any).onboarded = dbUser.onboarded
+      ;(user as any).provider = account?.provider ?? 'google'
       return true
     },
-    jwt({ token, user }) {
+    jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
         token.role = (user as any).role ?? 'CUSTOMER'
+        token.onboarded = (user as any).onboarded ?? false
+        token.provider = (user as any).provider ?? account?.provider ?? 'google'
       }
       return token
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
-        session.user.role = (token.role as string) ?? 'CUSTOMER'
+        session.user.id = token.id
+        session.user.role = token.role ?? 'CUSTOMER'
+        session.user.onboarded = token.onboarded ?? false
+        session.user.provider = token.provider ?? 'google'
       }
       return session
     },

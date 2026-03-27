@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { signIn, useSession } from 'next-auth/react'
 import { useEffect } from 'react'
 import { Button, Card } from '@/components/ui'
+import { roleHome } from '@/lib/roles'
 
 export default function LandingPage() {
   const router = useRouter()
@@ -11,9 +12,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/studios')
+      if (!session?.user?.onboarded) {
+        router.replace('/onboarding')
+      } else {
+        router.replace(roleHome(session.user.role))
+      }
     }
-  }, [status, router])
+  }, [status, session, router])
 
   if (status === 'loading' || status === 'authenticated') {
     return (
@@ -47,7 +52,7 @@ export default function LandingPage() {
           </p>
 
           <Button
-            onClick={() => signIn('google', { callbackUrl: '/studios' })}
+            onClick={() => signIn('google', { callbackUrl: '/' })}
             fullWidth
             variant="ghost"
             className="flex items-center justify-center gap-2"
@@ -62,7 +67,7 @@ export default function LandingPage() {
           </Button>
 
           <Button
-            onClick={() => signIn('facebook', { callbackUrl: '/studios' })}
+            onClick={() => signIn('facebook', { callbackUrl: '/' })}
             fullWidth
             variant="ghost"
             className="flex items-center justify-center gap-2"

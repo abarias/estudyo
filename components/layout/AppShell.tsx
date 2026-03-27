@@ -2,18 +2,34 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Calendar, Settings, LogOut, LogIn } from 'lucide-react'
+import { MapPin, Calendar, Settings, BookOpen, LogOut, LogIn } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 
-const navItems = [
-  { href: '/studios', label: 'Studios', icon: MapPin },
-  { href: '/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/owner', label: 'Owner', icon: Settings },
-]
+function getNavItems(role: string) {
+  switch (role) {
+    case 'OWNER':
+      return [
+        { href: '/studios', label: 'Studios', icon: MapPin },
+        { href: '/owner', label: 'Dashboard', icon: Settings },
+      ]
+    case 'INSTRUCTOR':
+      return [
+        { href: '/studios', label: 'Studios', icon: MapPin },
+        { href: '/instructor', label: 'Schedule', icon: BookOpen },
+      ]
+    default: // CUSTOMER
+      return [
+        { href: '/studios', label: 'Studios', icon: MapPin },
+        { href: '/bookings', label: 'Bookings', icon: Calendar },
+      ]
+  }
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const role = session?.user?.role ?? 'CUSTOMER'
+  const navItems = getNavItems(role)
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">

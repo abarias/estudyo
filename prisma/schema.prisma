@@ -4,8 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
+
+// ── NextAuth models ────────────────────────────────────────────────────────
 
 model Account {
   id                String  @id @default(cuid())
@@ -35,16 +37,20 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?       @unique
   emailVerified DateTime?
   image         String?
-  role          String    @default("CUSTOMER")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String        @default("CUSTOMER")
+  onboarded     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   accounts      Account[]
   sessions      Session[]
+  bookings      Booking[]
+  entitlements  Entitlement[]
+  waitlist      WaitlistEntry[]
 }
 
 model VerificationToken {
@@ -53,4 +59,50 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ── App models ─────────────────────────────────────────────────────────────
+
+model Booking {
+  id          String    @id @default(cuid())
+  userId      String
+  sessionId   String
+  status      String    @default("CONFIRMED")
+  bookedAt    DateTime  @default(now())
+  cancelledAt DateTime?
+  chargeId    String    @default("")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model Entitlement {
+  id             String    @id @default(cuid())
+  userId         String
+  type           String
+  productId      String
+  remaining      Int
+  serviceTypeIds String    @default("[]")
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model WaitlistEntry {
+  id             String    @id @default(cuid())
+  userId         String
+  sessionId      String
+  status         String    @default("WAITING")
+  position       Int
+  joinedAt       DateTime  @default(now())
+  offeredAt      DateTime?
+  offerExpiresAt DateTime?
+  acceptedAt     DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
 }
