@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { getAuthUserId } from '@/lib/session'
-import { sessions } from '@/lib/mockStore'
+import { lookupSession } from '@/lib/lookupSession'
 import { POLICY } from '@/lib/mockStore'
 
 // PATCH /api/bookings/[id] — cancel a booking
@@ -18,7 +18,7 @@ export async function PATCH(
   if (!booking) return Response.json({ error: 'Booking not found' }, { status: 404 })
 
   // Enforce cancellation cutoff
-  const mockSession = sessions.find(s => s.id === booking.sessionId)
+  const mockSession = await lookupSession(booking.sessionId)
   if (mockSession) {
     const sessionDateTime = new Date(mockSession.date)
     const [h, m] = mockSession.startTime.split(':').map(Number)

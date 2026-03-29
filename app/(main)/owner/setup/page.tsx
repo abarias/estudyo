@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Check } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { Button, Card, Input } from '@/components/ui'
+import LocationPicker from '@/components/studio/LocationPicker'
 
 const STEPS = ['Studio', 'Rooms', 'Services', 'Products', 'Templates', 'Generate']
 const COLORS: Array<'sage' | 'clay' | 'blush' | 'sky'> = ['sage', 'clay', 'blush', 'sky']
@@ -43,6 +44,15 @@ export default function OwnerSetupPage() {
   const [tplDays, setTplDays] = useState<number[]>([1, 3, 5])
   const [tplTime, setTplTime] = useState('09:00')
   const [tplCapacity, setTplCapacity] = useState('')
+  const [done, setDone] = useState(false)
+  const [completedName, setCompletedName] = useState('')
+  const [completing, setCompleting] = useState(false)
+  const [completeError, setCompleteError] = useState('')
+
+  const allTimezones = useMemo(() =>
+    Intl.supportedValuesOf('timeZone'),
+    []
+  )
 
   const step = setup.step
 
@@ -63,9 +73,18 @@ export default function OwnerSetupPage() {
     if (step > 0) setSetupStep(step - 1)
   }
 
-  const handleComplete = () => {
-    completeSetup()
-    router.push('/owner')
+  const handleComplete = async () => {
+    setCompleting(true)
+    setCompleteError('')
+    setCompletedName(setup.studioName)
+    try {
+      await completeSetup()
+      setDone(true)
+    } catch {
+      setCompleteError('Something went wrong. Please try again.')
+    } finally {
+      setCompleting(false)
+    }
   }
 
   const handleAddRoom = () => {
@@ -128,6 +147,25 @@ export default function OwnerSetupPage() {
     )
   }
 
+  if (done) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="text-center py-16 space-y-4">
+          <div className="w-16 h-16 bg-sage/10 rounded-full flex items-center justify-center mx-auto">
+            <Check size={32} className="text-sage" />
+          </div>
+          <h2 className="text-xl font-bold text-text">Studio Created!</h2>
+          <p className="text-sm text-muted">
+            <strong>{completedName || 'Your studio'}</strong> has been set up with sessions ready to go.
+          </p>
+          <Button variant="primary" fullWidth onClick={() => router.push('/owner/studios')}>
+            View My Studios
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-bg p-4">
       {/* Progress */}
@@ -157,11 +195,13 @@ export default function OwnerSetupPage() {
               onChange={(e) => updateSetupStudio({ studioName: e.target.value })}
               placeholder="e.g., Serenity Studio"
             />
-            <Input
-              label="Address"
-              value={setup.studioAddress}
-              onChange={(e) => updateSetupStudio({ studioAddress: e.target.value })}
-              placeholder="123 Main St, City"
+            <LocationPicker
+              coordLat={setup.coordLat}
+              coordLng={setup.coordLng}
+              address={setup.studioAddress}
+              onLocationChange={(lat, lng, addr) =>
+                updateSetupStudio({ coordLat: lat, coordLng: lng, studioAddress: addr })
+              }
             />
             <div>
               <label className="block text-sm font-medium text-text mb-1">Timezone</label>
@@ -170,10 +210,9 @@ export default function OwnerSetupPage() {
                 onChange={(e) => updateSetupStudio({ timezone: e.target.value })}
                 className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text"
               >
-                <option value="America/New_York">Eastern Time</option>
-                <option value="America/Chicago">Central Time</option>
-                <option value="America/Denver">Mountain Time</option>
-                <option value="America/Los_Angeles">Pacific Time</option>
+                {allTimezones.map((tz) => (
+                  <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                ))}
               </select>
             </div>
           </>
@@ -478,9 +517,14 @@ export default function OwnerSetupPage() {
             Next <ChevronRight size={18} className="ml-2" />
           </Button>
         ) : (
-          <Button fullWidth onClick={handleComplete}>
-            Complete Setup <Check size={18} className="ml-2" />
-          </Button>
+          <>
+            {completeError && (
+              <p className="text-xs text-red-500 text-center">{completeError}</p>
+            )}
+            <Button fullWidth onClick={handleComplete} disabled={completing}>
+              {completing ? 'Saving…' : <>Complete Setup <Check size={18} className="ml-2" /></>}
+            </Button>
+          </>
         )}
       </div>
     </div>

@@ -12,13 +12,15 @@ interface BookingBottomSheetProps {
   session: Session | null
   serviceType?: ServiceType
   studio?: Studio
+  waitlistEnabled?: boolean
+  requiresCredits?: boolean
   entitlements: Entitlement[]
   products: Product[]
   userBooking?: Booking | null
   userWaitlistEntry?: WaitlistEntry | null
   onBook: (entitlementId: string) => Promise<boolean | void>
   onCancel?: (bookingId: string) => Promise<boolean | void>
-  onJoinWaitlist: () => Promise<boolean | void>
+  onJoinWaitlist: () => Promise<boolean | string | void>
   onAcceptOffer?: (entryId: string, entitlementId: string) => Promise<boolean | void>
   onPurchase: (productId: string) => Promise<void>
 }
@@ -29,6 +31,8 @@ export default function BookingBottomSheet({
   session,
   serviceType,
   studio,
+  waitlistEnabled = true,
+  requiresCredits = false,
   entitlements,
   products,
   userBooking,
@@ -90,14 +94,14 @@ export default function BookingBottomSheet({
   }
 
   const handleBook = async () => {
-    if (!hasEntitlement) {
+    if (requiresCredits && !hasEntitlement) {
       setShowPurchase(true)
       return
     }
     setLoading(true)
     setStatus('idle')
     try {
-      const result = await onBook(entitlements[0].id)
+      const result = await onBook(requiresCredits ? entitlements[0]?.id : '')
       if (result === false) {
         setStatus('error')
         setErrorMessage('Booking failed. Please try again.')
@@ -139,9 +143,9 @@ export default function BookingBottomSheet({
     setStatus('idle')
     try {
       const result = await onJoinWaitlist()
-      if (result === false) {
+      if (result === false || typeof result === 'string') {
         setStatus('error')
-        setErrorMessage('Failed to join waitlist.')
+        setErrorMessage(typeof result === 'string' ? result : 'Failed to join waitlist.')
       } else {
         setStatus('success')
         setTimeout(handleClose, 1200)
@@ -335,7 +339,7 @@ export default function BookingBottomSheet({
                 )}
               </div>
 
-              {hasEntitlement ? (
+              {(!requiresCredits || hasEntitlement) ? (
                 <Button fullWidth onClick={handleAcceptOffer} disabled={loading}>
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -367,23 +371,25 @@ export default function BookingBottomSheet({
           {/* Not booked - show booking options */}
           {!isBooked && !isOnWaitlist && !hasOffer && (
             <>
-              {/* Entitlement status */}
-              {hasEntitlement ? (
-                <div className="bg-sage/10 rounded-2xl p-3 text-sm">
-                  <span className="text-sage font-medium">
-                    {entitlements[0].remaining} credits available
-                  </span>
-                  <span className="text-muted"> - 1 credit will be used</span>
-                </div>
-              ) : (
-                <div className="bg-clay/10 rounded-2xl p-3 text-sm">
-                  <span className="text-clay font-medium">No credits available</span>
-                  <span className="text-muted"> - Purchase to continue</span>
-                </div>
+              {/* Credits status — only shown when payment is required */}
+              {requiresCredits && (
+                hasEntitlement ? (
+                  <div className="bg-sage/10 rounded-2xl p-3 text-sm">
+                    <span className="text-sage font-medium">
+                      {entitlements[0].remaining} credits available
+                    </span>
+                    <span className="text-muted"> - 1 credit will be used</span>
+                  </div>
+                ) : (
+                  <div className="bg-clay/10 rounded-2xl p-3 text-sm">
+                    <span className="text-clay font-medium">No credits available</span>
+                    <span className="text-muted"> - Purchase to continue</span>
+                  </div>
+                )
               )}
 
               {/* Action */}
-              {isFull ? (
+              {isFull && !waitlistEnabled ? null : isFull ? (
                 <>
                   <Button fullWidth onClick={handleWaitlist} disabled={loading}>
                     {loading ? (
@@ -407,10 +413,10 @@ export default function BookingBottomSheet({
                         <Loader2 size={18} className="animate-spin" />
                         Booking...
                       </span>
-                    ) : hasEntitlement ? (
-                      'Confirm Booking'
-                    ) : (
+                    ) : requiresCredits && !hasEntitlement ? (
                       'Purchase to Book'
+                    ) : (
+                      'Confirm Booking'
                     )}
                   </Button>
                   <p className="text-xs text-muted text-center">

@@ -2,19 +2,20 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Calendar, Settings, BookOpen, LogOut, LogIn } from 'lucide-react'
+import { MapPin, Calendar, Settings, BookOpen, LogOut, LogIn, CalendarDays, Building2 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 
 function getNavItems(role: string) {
   switch (role) {
     case 'OWNER':
       return [
-        { href: '/studios', label: 'Studios', icon: MapPin },
-        { href: '/owner', label: 'Dashboard', icon: Settings },
+        { href: '/owner', label: 'Schedule', icon: CalendarDays },
+        { href: '/owner/bookings', label: 'Bookings', icon: Calendar },
+        { href: '/owner/studios', label: 'Studios', icon: Building2 },
       ]
     case 'INSTRUCTOR':
       return [
-        { href: '/studios', label: 'Studios', icon: MapPin },
+        { href: '/instructor/studios', label: 'Studios', icon: MapPin },
         { href: '/instructor', label: 'Schedule', icon: BookOpen },
       ]
     default: // CUSTOMER
@@ -67,7 +68,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border safe-area-bottom">
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname.startsWith(href)
+            const isActive = (href === '/owner' || href === '/instructor')
+              ? pathname === href
+              : pathname.startsWith(href)
             return (
               <Link
                 key={href}

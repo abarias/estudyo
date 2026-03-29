@@ -1,76 +1,65 @@
 import {
-  studios, sessions, products,
   getServiceType, getRoom,
   offerWaitlistSpot,
   notificationEvents,
 } from './mockStore'
 import type { Studio, Session, Product, Entitlement, Booking, WaitlistEntry, NotificationEvent } from '@/types/domain'
 
-// Simulate network delay (used for mock-only calls)
-const delay = (ms: number = 200) => new Promise(resolve => setTimeout(resolve, ms))
-
 // ========== STUDIOS ==========
 export async function getStudios(): Promise<Studio[]> {
-  await delay()
-  return studios
+  const res = await fetch('/api/studios')
+  if (!res.ok) throw new Error('Failed to load studios')
+  const data = await res.json() as Array<Studio & { createdAt: string }>
+  return data.map((s) => ({ ...s, createdAt: new Date(s.createdAt) }))
 }
 
 export async function getStudio(studioId: string): Promise<Studio | null> {
-  await delay()
-  return studios.find(s => s.id === studioId) || null
+  const res = await fetch(`/api/studios/${studioId}`)
+  if (!res.ok) return null
+  const s = await res.json() as Studio & { createdAt: string }
+  return { ...s, createdAt: new Date(s.createdAt) }
 }
 
 // ========== SERVICES ==========
 export async function getServices(studioId: string) {
-  await delay()
-  const studio = studios.find(s => s.id === studioId)
+  const studio = await getStudio(studioId)
   return studio?.serviceTypes || []
 }
 
 // ========== SESSIONS ==========
 export async function getSessions(filters?: { studioId?: string; date?: Date; serviceTypeId?: string }): Promise<Session[]> {
-  await delay()
-  let result = [...sessions]
-
-  if (filters?.studioId) {
-    result = result.filter(s => s.studioId === filters.studioId)
-  }
-  if (filters?.date) {
-    const filterDate = filters.date.toDateString()
-    result = result.filter(s => s.date.toDateString() === filterDate)
-  }
-  if (filters?.serviceTypeId) {
-    result = result.filter(s => s.serviceTypeId === filters.serviceTypeId)
-  }
-
-  return result.sort((a, b) => {
-    if (a.date.getTime() !== b.date.getTime()) return a.date.getTime() - b.date.getTime()
-    return a.startTime.localeCompare(b.startTime)
-  })
+  const params = new URLSearchParams()
+  if (filters?.studioId) params.set('studioId', filters.studioId)
+  if (filters?.date) params.set('date', filters.date.toISOString())
+  if (filters?.serviceTypeId) params.set('serviceTypeId', filters.serviceTypeId)
+  const res = await fetch(`/api/sessions?${params}`)
+  if (!res.ok) throw new Error('Failed to load sessions')
+  const data = await res.json() as Array<Session & { date: string }>
+  return data.map((s) => ({ ...s, date: new Date(s.date) }))
 }
 
 export async function getSession(sessionId: string): Promise<Session | null> {
-  await delay()
-  return sessions.find(s => s.id === sessionId) || null
+  const res = await fetch(`/api/sessions/${sessionId}`)
+  if (!res.ok) return null
+  const s = await res.json() as Session & { date: string }
+  return { ...s, date: new Date(s.date) }
 }
 
 export async function getSessionDetails(sessionId: string) {
-  await delay()
-  const session = sessions.find(s => s.id === sessionId)
+  const session = await getSession(sessionId)
   if (!session) return null
-
-  const studio = studios.find(s => s.id === session.studioId)
-  const serviceType = getServiceType(session.serviceTypeId)
-  const room = getRoom(session.studioId, session.roomId)
-
+  const studio = await getStudio(session.studioId)
+  const serviceType = studio?.serviceTypes.find((st) => st.id === session.serviceTypeId)
+  const room = studio?.rooms.find((r) => r.id === session.roomId)
   return { session, studio, serviceType, room }
 }
 
 // ========== PRODUCTS ==========
 export async function getProducts(studioId?: string): Promise<Product[]> {
-  await delay()
-  if (studioId) return products.filter(p => p.studioId === studioId)
-  return products
+  const params = studioId ? `?studioId=${studioId}` : ''
+  const res = await fetch(`/api/products${params}`)
+  if (!res.ok) throw new Error('Failed to load products')
+  return res.json()
 }
 
 // ========== WALLET & ENTITLEMENTS ==========
@@ -115,9 +104,9 @@ export async function getBookingWithSession(bookingId: string) {
   const booking = bookings.find(b => b.id === bookingId)
   if (!booking) return null
 
-  const session = sessions.find(s => s.id === booking.sessionId)
-  const serviceType = session ? getServiceType(session.serviceTypeId) : undefined
-  const studio = session ? studios.find(s => s.id === session.studioId) : undefined
+  const session = await getSession(booking.sessionId)
+  const studio = session ? await getStudio(session.studioId) : undefined
+  const serviceType = studio?.serviceTypes.find((st) => st.id === session?.serviceTypeId)
 
   return { booking, session, serviceType, studio }
 }
@@ -130,8 +119,15 @@ export async function waitlistJoin(_userId: string, sessionId: string) {
     body: JSON.stringify({ sessionId }),
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error ?? 'Join waitlist failed')
+  if (!res.ok) return { error: data.error ?? 'Join waitlist failed' }
   return data as WaitlistEntry
+}
+
+export async function waitlistLeave(entryId: string) {
+  const res = await fetch(`/api/waitlist/${entryId}`, { method: 'DELETE' })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Leave waitlist failed')
+  return data
 }
 
 export async function waitlistAccept(entryId: string, entitlementId: string) {
@@ -150,6 +146,8 @@ export async function getWaitlistEntries(_userId: string): Promise<WaitlistEntry
   if (!res.ok) throw new Error('Failed to fetch waitlist')
   return res.json()
 }
+
+const delay = (ms: number = 200) => new Promise(resolve => setTimeout(resolve, ms))
 
 // ========== NOTIFICATIONS ==========
 export async function getNotifications(userId: string): Promise<NotificationEvent[]> {

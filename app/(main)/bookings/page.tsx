@@ -168,6 +168,9 @@ export default function BookingsPage() {
             <p className="text-sm text-muted">
               {format(session.date, 'EEE, MMM d')} at {session.startTime}
             </p>
+            {session.instructorName && (
+              <p className="text-xs text-muted mt-0.5">with {session.instructorName}</p>
+            )}
           </div>
           <span className={`text-xs px-2 py-1 rounded-full ${
             booking.status === 'CONFIRMED' ? 'bg-sage/20 text-sage' : 'bg-muted/20 text-muted'

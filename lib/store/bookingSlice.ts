@@ -20,7 +20,8 @@ export interface BookingSlice {
   loadWaitlist: () => Promise<void>
   bookSession: (sessionId: string, entitlementId: string) => Promise<boolean>
   cancelBooking: (bookingId: string) => Promise<boolean>
-  joinWaitlist: (sessionId: string) => Promise<boolean>
+  joinWaitlist: (sessionId: string) => Promise<true | string>
+  leaveWaitlist: (entryId: string, sessionId: string) => Promise<boolean>
   acceptWaitlistOffer: (entryId: string, entitlementId: string) => Promise<boolean>
   addPendingOperation: (op: PendingOperation) => void
   updatePendingOperation: (id: string, status: PendingOperation['status'], error?: string) => void
@@ -55,22 +56,27 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
   bookSession: async (sessionId, entitlementId) => {
     const opId = `book-${sessionId}-${Date.now()}`
     const session = get().getSession(sessionId)
-    const entitlement = get().entitlements.find((e) => e.id === entitlementId)
 
-    if (!session || !entitlement) return false
+    if (!session) return false
+
+    const entitlement = entitlementId ? get().entitlements.find((e) => e.id === entitlementId) : null
 
     // Optimistic update
     get().addPendingOperation({ type: 'book', id: opId, status: 'pending' })
     get().updateSessionOptimistic(sessionId, { bookedCount: session.bookedCount + 1 })
-    get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining - 1 })
+    if (entitlement) {
+      get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining - 1 })
+    }
 
     try {
       const result = await withDevSimulation(get(), () => api.book(get().userId, sessionId, entitlementId))
-      
+
       if ('error' in result) {
         // Rollback
         get().updateSessionOptimistic(sessionId, { bookedCount: session.bookedCount })
-        get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
+        if (entitlement) {
+          get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
+        }
         get().updatePendingOperation(opId, 'error', result.error as string)
         setTimeout(() => get().removePendingOperation(opId), 3000)
         return false
@@ -84,7 +90,9 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
     } catch (e) {
       // Rollback
       get().updateSessionOptimistic(sessionId, { bookedCount: session.bookedCount })
-      get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
+      if (entitlement) {
+        get().updateEntitlementOptimistic(entitlementId, { remaining: entitlement.remaining })
+      }
       const msg = e instanceof Error ? e.message : 'Network error'
       get().updatePendingOperation(opId, 'error', msg)
       setTimeout(() => get().removePendingOperation(opId), 3000)
@@ -164,9 +172,10 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
         if (session) {
           get().updateSessionOptimistic(sessionId, { waitlistCount: session.waitlistCount })
         }
-        get().updatePendingOperation(opId, 'error', result.error as string)
+        const msg = result.error as string
+        get().updatePendingOperation(opId, 'error', msg)
         setTimeout(() => get().removePendingOperation(opId), 3000)
-        return false
+        return msg
       }
 
       await get().loadWaitlist()
@@ -179,6 +188,25 @@ export const createBookingSlice: StateCreator<AppStore, [], [], BookingSlice> = 
       }
       get().updatePendingOperation(opId, 'error', 'Network error')
       setTimeout(() => get().removePendingOperation(opId), 3000)
+      return 'Network error'
+    }
+  },
+
+  leaveWaitlist: async (entryId, sessionId) => {
+    const session = get().getSession(sessionId)
+    if (session) {
+      get().updateSessionOptimistic(sessionId, { waitlistCount: Math.max(0, session.waitlistCount - 1) })
+    }
+    set((state) => ({
+      waitlistEntries: state.waitlistEntries.filter((e) => e.id !== entryId),
+    }))
+    try {
+      await api.waitlistLeave(entryId)
+      return true
+    } catch {
+      // Roll back
+      if (session) get().updateSessionOptimistic(sessionId, { waitlistCount: session.waitlistCount })
+      await get().loadWaitlist()
       return false
     }
   },

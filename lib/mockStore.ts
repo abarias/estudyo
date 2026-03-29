@@ -43,6 +43,7 @@ export const studios: Studio[] = [
     description: 'Premium movement studio in the heart of Bonifacio Global City.',
     address: '4F High Street South Corporate Plaza, BGC, Taguig',
     coordinates: { lat: 14.5503, lng: 121.0494 },
+    waitlistEnabled: true,
     ownerId: 'owner-1',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-1'),
     rooms: [
@@ -57,6 +58,7 @@ export const studios: Studio[] = [
     description: 'Your sanctuary for mindful movement in Ortigas.',
     address: '3F Estancia Mall, Capitol Commons, Pasig',
     coordinates: { lat: 14.5872, lng: 121.0716 },
+    waitlistEnabled: true,
     ownerId: 'owner-2',
     serviceTypes: serviceTypesSeed.filter(st => st.studioId === 'studio-2'),
     rooms: [
@@ -325,6 +327,37 @@ export function acceptWaitlistOffer(entryId: string, entitlementId: string): { b
   session.waitlistCount -= 1
 
   return { booking }
+}
+
+// ========== OWNER SETUP REGISTRATION ==========
+// Called after completeSetup so that subsequent loadStudios/loadSessions calls
+// return the newly created data instead of just the original seed data.
+export function registerSetupResult(opts: {
+  studio: Studio
+  sessions: Session[]
+  products: Product[]
+}) {
+  if (!studios.find((s) => s.id === opts.studio.id)) {
+    studios.push(opts.studio)
+  }
+  for (const session of opts.sessions) {
+    if (!sessions.find((s) => s.id === session.id)) {
+      sessions.push(session)
+    }
+  }
+  for (const product of opts.products) {
+    if (!products.find((p) => p.id === product.id)) {
+      products.push(product)
+    }
+  }
+}
+
+export function registerGeneratedSessions(newSessions: Session[]) {
+  for (const session of newSessions) {
+    if (!sessions.find((s) => s.id === session.id)) {
+      sessions.push(session)
+    }
+  }
 }
 
 // ========== REHYDRATION ==========
