@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, MapPin, Layers, ChevronRight, Zap, Users, UserPlus, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, MapPin, Layers, Zap, Users, UserPlus, X, ChevronDown, ChevronUp, Pencil } from 'lucide-react'
 import { Card, Button } from '@/components/ui'
 import Link from 'next/link'
 
@@ -145,7 +145,11 @@ export default function OwnerStudiosPage() {
                       </p>
                     )}
                   </div>
-                  <ChevronRight size={18} className="text-muted flex-shrink-0" />
+                  <Link href={`/owner/studios/${studio.id}/edit`}>
+                    <button className="p-1.5 text-muted hover:text-text transition-colors">
+                      <Pencil size={15} />
+                    </button>
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-4 text-xs text-muted">

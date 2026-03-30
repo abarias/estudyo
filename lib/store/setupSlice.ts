@@ -41,10 +41,12 @@ export interface SetupState {
   coordLat: number | null
   coordLng: number | null
   timezone: string
+  waitlistEnabled: boolean
   rooms: SetupRoom[]
   serviceTypes: SetupServiceType[]
   products: SetupProduct[]
   templates: SetupTemplate[]
+  instructorIds: string[]
   generateDays: 14 | 28
 }
 
@@ -52,7 +54,7 @@ export interface SetupSlice {
   setup: SetupState
   studioTemplates: Record<string, SetupTemplate[]>
   setSetupStep: (step: number) => void
-  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioAddress' | 'coordLat' | 'coordLng' | 'timezone'>>) => void
+  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioAddress' | 'coordLat' | 'coordLng' | 'timezone' | 'waitlistEnabled'>>) => void
   addSetupRoom: (room: SetupRoom) => void
   removeSetupRoom: (id: string) => void
   addSetupServiceType: (st: SetupServiceType) => void
@@ -61,6 +63,7 @@ export interface SetupSlice {
   removeSetupProduct: (id: string) => void
   addSetupTemplate: (template: SetupTemplate) => void
   removeSetupTemplate: (id: string) => void
+  setSetupInstructors: (ids: string[]) => void
   setGenerateDays: (days: 14 | 28) => void
   resetSetup: () => void
   completeSetup: () => Promise<void>
@@ -74,10 +77,12 @@ const initialSetup: SetupState = {
   coordLat: null,
   coordLng: null,
   timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
+  waitlistEnabled: true,
   rooms: [],
   serviceTypes: [],
   products: [],
   templates: [],
+  instructorIds: [],
   generateDays: 14,
 }
 
@@ -130,6 +135,9 @@ export const createSetupSlice: StateCreator<AppStore, [], [], SetupSlice> = (set
       setup: { ...state.setup, templates: state.setup.templates.filter((t) => t.id !== id) },
     })),
 
+  setSetupInstructors: (ids) =>
+    set((state) => ({ setup: { ...state.setup, instructorIds: ids } })),
+
   setGenerateDays: (days) =>
     set((state) => ({ setup: { ...state.setup, generateDays: days } })),
 
@@ -146,10 +154,12 @@ export const createSetupSlice: StateCreator<AppStore, [], [], SetupSlice> = (set
         coordLat: setup.coordLat,
         coordLng: setup.coordLng,
         timezone: setup.timezone,
+        waitlistEnabled: setup.waitlistEnabled,
         rooms: setup.rooms,
         serviceTypes: setup.serviceTypes,
         products: setup.products,
         templates: setup.templates,
+        instructorIds: setup.instructorIds,
         generateDays: setup.generateDays,
       }),
     })

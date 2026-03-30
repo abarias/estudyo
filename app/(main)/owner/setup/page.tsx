@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Check } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { Button, Card, Input } from '@/components/ui'
 import LocationPicker from '@/components/studio/LocationPicker'
 
-const STEPS = ['Studio', 'Rooms', 'Services', 'Products', 'Templates', 'Generate']
+const STEPS = ['Studio', 'Rooms', 'Services', 'Products', 'Templates', 'Instructors', 'Generate']
 const COLORS: Array<'sage' | 'clay' | 'blush' | 'sky'> = ['sage', 'clay', 'blush', 'sky']
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -24,6 +24,7 @@ export default function OwnerSetupPage() {
   const removeSetupProduct = useStore((s) => s.removeSetupProduct)
   const addSetupTemplate = useStore((s) => s.addSetupTemplate)
   const removeSetupTemplate = useStore((s) => s.removeSetupTemplate)
+  const setSetupInstructors = useStore((s) => s.setSetupInstructors)
   const setGenerateDays = useStore((s) => s.setGenerateDays)
   const completeSetup = useStore((s) => s.completeSetup)
 
@@ -44,17 +45,24 @@ export default function OwnerSetupPage() {
   const [tplDays, setTplDays] = useState<number[]>([1, 3, 5])
   const [tplTime, setTplTime] = useState('09:00')
   const [tplCapacity, setTplCapacity] = useState('')
+  const [allInstructors, setAllInstructors] = useState<{ id: string; name: string | null; email: string | null }[]>([])
   const [done, setDone] = useState(false)
   const [completedName, setCompletedName] = useState('')
   const [completing, setCompleting] = useState(false)
   const [completeError, setCompleteError] = useState('')
 
-  const allTimezones = useMemo(() =>
-    Intl.supportedValuesOf('timeZone'),
-    []
-  )
+  const allTimezones = useMemo(() => Intl.supportedValuesOf('timeZone'), [])
 
   const step = setup.step
+
+  // Fetch instructors when reaching step 5
+  useEffect(() => {
+    if (step === 5 && allInstructors.length === 0) {
+      fetch('/api/owner/instructors')
+        .then(r => r.ok ? r.json() : [])
+        .then(setAllInstructors)
+    }
+  }, [step, allInstructors.length])
 
   const canNext = () => {
     if (step === 0) return setup.studioName.trim() && setup.studioAddress.trim()
@@ -62,6 +70,7 @@ export default function OwnerSetupPage() {
     if (step === 2) return setup.serviceTypes.length > 0
     if (step === 3) return setup.products.length > 0
     if (step === 4) return setup.templates.length > 0
+    // step 5 (Instructors) and step 6 (Generate) are always valid
     return true
   }
 
@@ -214,6 +223,20 @@ export default function OwnerSetupPage() {
                   <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Waitlist toggle */}
+            <div className="flex items-center justify-between py-2 px-4 bg-surface border border-border rounded-2xl">
+              <div>
+                <p className="text-sm font-medium text-text">Enable Waitlist</p>
+                <p className="text-xs text-muted">Let customers join a waitlist when sessions are full</p>
+              </div>
+              <button
+                onClick={() => updateSetupStudio({ waitlistEnabled: !setup.waitlistEnabled })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${setup.waitlistEnabled ? 'bg-sage' : 'bg-border'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${setup.waitlistEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
           </>
         )}
@@ -461,6 +484,51 @@ export default function OwnerSetupPage() {
         {step === 5 && (
           <>
             <Card>
+              <p className="text-sm text-muted mb-3">
+                Optionally tag instructors to this studio. They can then claim sessions.
+              </p>
+              {allInstructors.length === 0 ? (
+                <p className="text-sm text-muted italic">No instructor accounts exist yet. You can add them later.</p>
+              ) : (
+                <div className="space-y-2">
+                  {allInstructors.map((inst) => {
+                    const selected = setup.instructorIds.includes(inst.id)
+                    return (
+                      <button
+                        key={inst.id}
+                        onClick={() => {
+                          const next = selected
+                            ? setup.instructorIds.filter((id) => id !== inst.id)
+                            : [...setup.instructorIds, inst.id]
+                          setSetupInstructors(next)
+                        }}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border transition-colors ${
+                          selected ? 'border-sage bg-sage/10' : 'border-border bg-surface'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-text">{inst.name ?? inst.email}</p>
+                          {inst.name && inst.email && (
+                            <p className="text-xs text-muted">{inst.email}</p>
+                          )}
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          selected ? 'border-sage bg-sage' : 'border-border'
+                        }`}>
+                          {selected && <Check size={11} className="text-white" />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+
+        {step === 6 && (
+          <>
+            <Card>
               <h3 className="font-semibold text-text mb-2">Ready to Generate</h3>
               <p className="text-sm text-muted mb-4">
                 Sessions will be created based on your templates for the next{' '}
@@ -498,6 +566,8 @@ export default function OwnerSetupPage() {
                 <li>Services: {setup.serviceTypes.length}</li>
                 <li>Products: {setup.products.length}</li>
                 <li>Templates: {setup.templates.length}</li>
+                <li>Instructors: {setup.instructorIds.length}</li>
+                <li>Waitlist: {setup.waitlistEnabled ? 'Enabled' : 'Disabled'}</li>
               </ul>
             </Card>
           </>

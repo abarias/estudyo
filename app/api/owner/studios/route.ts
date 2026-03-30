@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (user?.role !== 'OWNER') return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, address, coordLat, coordLng, timezone, rooms, serviceTypes, products, templates, generateDays } = body
+  const { name, address, coordLat, coordLng, timezone, waitlistEnabled, rooms, serviceTypes, products, templates, instructorIds, generateDays } = body
 
   const { studioRecord, createdRooms, createdServiceTypes, createdTemplates } = await db.$transaction(async (tx) => {
     const s = await tx.studio.create({
@@ -50,9 +50,23 @@ export async function POST(req: NextRequest) {
         coordLat: coordLat ?? null,
         coordLng: coordLng ?? null,
         timezone: timezone ?? 'UTC',
+        waitlistEnabled: waitlistEnabled ?? true,
         ownerId: userId,
       },
     })
+
+    // Tag instructors to the studio
+    if (Array.isArray(instructorIds) && instructorIds.length > 0) {
+      await Promise.all(
+        instructorIds.map((instructorId: string) =>
+          tx.studioInstructor.upsert({
+            where: { studioId_instructorId: { studioId: s.id, instructorId } },
+            create: { studioId: s.id, instructorId },
+            update: {},
+          })
+        )
+      )
+    }
 
     const createdRooms = await Promise.all(
       (rooms ?? []).map((r: { name: string; capacity: number }) =>
