@@ -138,6 +138,9 @@ export default function OwnerStudiosPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-text">{studio.name}</p>
+                    {studio.description && (
+                      <p className="text-xs text-muted mt-0.5 line-clamp-2">{studio.description}</p>
+                    )}
                     {studio.address && (
                       <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
                         <MapPin size={11} />

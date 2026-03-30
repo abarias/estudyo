@@ -28,11 +28,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (studio.ownerId !== userId) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, address, coordLat, coordLng, timezone, waitlistEnabled } = body
+  const { name, description, address, coordLat, coordLng, timezone, waitlistEnabled } = body
 
   // Build update data from only provided fields
   const data: Record<string, unknown> = {}
   if (name !== undefined) data.name = name
+  if (description !== undefined) data.description = description
   if (address !== undefined) data.address = address
   if (coordLat !== undefined) data.coordLat = coordLat
   if (coordLng !== undefined) data.coordLng = coordLng

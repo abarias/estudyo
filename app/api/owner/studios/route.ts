@@ -40,12 +40,13 @@ export async function POST(req: NextRequest) {
   if (user?.role !== 'OWNER') return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, address, coordLat, coordLng, timezone, waitlistEnabled, rooms, serviceTypes, products, templates, instructorIds, generateDays } = body
+  const { name, description, address, coordLat, coordLng, timezone, waitlistEnabled, rooms, serviceTypes, products, templates, instructorIds, generateDays } = body
 
   const { studioRecord, createdRooms, createdServiceTypes, createdTemplates } = await db.$transaction(async (tx) => {
     const s = await tx.studio.create({
       data: {
         name,
+        description: description ?? '',
         address: address ?? '',
         coordLat: coordLat ?? null,
         coordLng: coordLng ?? null,

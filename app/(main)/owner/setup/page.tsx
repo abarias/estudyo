@@ -204,6 +204,16 @@ export default function OwnerSetupPage() {
               onChange={(e) => updateSetupStudio({ studioName: e.target.value })}
               placeholder="e.g., Serenity Studio"
             />
+            <div>
+              <label className="block text-sm font-medium text-text mb-1">Description <span className="text-muted font-normal">(optional)</span></label>
+              <textarea
+                value={setup.studioDescription}
+                onChange={(e) => updateSetupStudio({ studioDescription: e.target.value })}
+                placeholder="Tell customers about your studio, its vibe, what to expect…"
+                rows={3}
+                className="w-full px-4 py-3 rounded-2xl border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/30 transition-all duration-200 resize-none"
+              />
+            </div>
             <LocationPicker
               coordLat={setup.coordLat}
               coordLng={setup.coordLng}

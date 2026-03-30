@@ -154,6 +154,9 @@ export default function StudioDetailPage() {
       <div>
         <h1 className="text-xl font-bold text-text">{studio.name}</h1>
         <p className="text-sm text-muted">{studio.address}</p>
+        {studio.description && (
+          <p className="text-sm text-muted mt-1">{studio.description}</p>
+        )}
       </div>
 
       <DateStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />

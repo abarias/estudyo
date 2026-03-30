@@ -21,6 +21,7 @@ export default function StudioEditPage() {
 
   // Basic info
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [address, setAddress] = useState('')
   const [coordLat, setCoordLat] = useState<number | null>(null)
   const [coordLng, setCoordLng] = useState<number | null>(null)
@@ -52,6 +53,7 @@ export default function StudioEditPage() {
     if (!res.ok) { router.push('/owner/studios'); return }
     const data: Studio = await res.json()
     setName(data.name)
+    setDescription(data.description ?? '')
     setAddress(data.address ?? '')
     setCoordLat(data.coordinates?.lat ?? null)
     setCoordLng(data.coordinates?.lng ?? null)
@@ -76,7 +78,7 @@ export default function StudioEditPage() {
       const res = await fetch(`/api/owner/studios/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, address, coordLat, coordLng, timezone, waitlistEnabled }),
+        body: JSON.stringify({ name, description, address, coordLat, coordLng, timezone, waitlistEnabled }),
       })
       if (res.ok) setSaveSuccess(true)
     } finally {
@@ -187,6 +189,17 @@ export default function StudioEditPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Serenity Studio"
           />
+
+          <div>
+            <label className="block text-sm font-medium text-text mb-1">Description <span className="text-muted font-normal">(optional)</span></label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Tell customers about your studio, its vibe, what to expect…"
+              rows={3}
+              className="w-full px-4 py-3 rounded-2xl border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-sage/30 transition-all duration-200 resize-none"
+            />
+          </div>
 
           <LocationPicker
             coordLat={coordLat}

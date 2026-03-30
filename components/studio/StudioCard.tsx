@@ -47,7 +47,10 @@ export default function StudioCard({ studio }: StudioCardProps) {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-text truncate">{studio.name}</h3>
-          <div className="flex items-center gap-1 text-sm text-muted">
+          {studio.description && (
+            <p className="text-xs text-muted mt-0.5 line-clamp-2">{studio.description}</p>
+          )}
+          <div className="flex items-center gap-1 text-sm text-muted mt-0.5">
             <MapPin size={12} className="flex-shrink-0" />
             <span className="truncate">{studio.address}</span>
           </div>

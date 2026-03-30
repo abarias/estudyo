@@ -37,6 +37,7 @@ export interface SetupTemplate {
 export interface SetupState {
   step: number
   studioName: string
+  studioDescription: string
   studioAddress: string
   coordLat: number | null
   coordLng: number | null
@@ -54,7 +55,7 @@ export interface SetupSlice {
   setup: SetupState
   studioTemplates: Record<string, SetupTemplate[]>
   setSetupStep: (step: number) => void
-  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioAddress' | 'coordLat' | 'coordLng' | 'timezone' | 'waitlistEnabled'>>) => void
+  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioDescription' | 'studioAddress' | 'coordLat' | 'coordLng' | 'timezone' | 'waitlistEnabled'>>) => void
   addSetupRoom: (room: SetupRoom) => void
   removeSetupRoom: (id: string) => void
   addSetupServiceType: (st: SetupServiceType) => void
@@ -73,6 +74,7 @@ export interface SetupSlice {
 const initialSetup: SetupState = {
   step: 0,
   studioName: '',
+  studioDescription: '',
   studioAddress: '',
   coordLat: null,
   coordLng: null,
@@ -150,6 +152,7 @@ export const createSetupSlice: StateCreator<AppStore, [], [], SetupSlice> = (set
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: setup.studioName,
+        description: setup.studioDescription,
         address: setup.studioAddress,
         coordLat: setup.coordLat,
         coordLng: setup.coordLng,
