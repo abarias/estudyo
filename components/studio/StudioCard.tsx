@@ -39,9 +39,13 @@ function StudioIcon() {
 }
 
 export default function StudioCard({ studio }: StudioCardProps) {
+  const accentColor = studio.serviceTypes[0]?.color ?? 'sage'
   return (
     <Link href={`/studios/${studio.id}`}>
-      <Card className="flex items-center gap-4 hover:shadow-md transition-shadow">
+      <Card
+        className="flex items-center gap-4 hover:shadow-md transition-shadow border-l-4"
+        style={{ borderLeftColor: `var(--${accentColor})` }}
+      >
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sage/30 to-clay/20 flex items-center justify-center flex-shrink-0 text-sage">
           <StudioIcon />
         </div>
