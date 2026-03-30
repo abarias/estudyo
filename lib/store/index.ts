@@ -29,6 +29,7 @@ export const useStore = create<AppStore>()(
       }),
       {
         name: 'estudyo-store',
+        version: 2, // bump to discard stale persisted state (bookings, entitlements) after a re-seed
         // Only persist auth identity + wallet + bookings
         partialize: (state) => ({
           userId: state.userId,
