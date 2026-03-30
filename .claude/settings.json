@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -q 'schema\\.prisma' && cd /Users/RacingSux/Documents/Projects/estudyo/estudyo && node scripts/generate-schema-docs.mjs 2>/dev/null || true",
+            "statusMessage": "Regenerating schema docs..."
+          }
+        ]
+      }
+    ]
+  }
+}
