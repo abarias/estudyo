@@ -37,19 +37,25 @@ export interface SetupTemplate {
 export interface SetupState {
   step: number
   studioName: string
+  studioDescription: string
   studioAddress: string
+  coordLat: number | null
+  coordLng: number | null
   timezone: string
+  waitlistEnabled: boolean
   rooms: SetupRoom[]
   serviceTypes: SetupServiceType[]
   products: SetupProduct[]
   templates: SetupTemplate[]
+  instructorIds: string[]
   generateDays: 14 | 28
 }
 
 export interface SetupSlice {
   setup: SetupState
+  studioTemplates: Record<string, SetupTemplate[]>
   setSetupStep: (step: number) => void
-  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioAddress' | 'timezone'>>) => void
+  updateSetupStudio: (data: Partial<Pick<SetupState, 'studioName' | 'studioDescription' | 'studioAddress' | 'coordLat' | 'coordLng' | 'timezone' | 'waitlistEnabled'>>) => void
   addSetupRoom: (room: SetupRoom) => void
   removeSetupRoom: (id: string) => void
   addSetupServiceType: (st: SetupServiceType) => void
@@ -58,20 +64,27 @@ export interface SetupSlice {
   removeSetupProduct: (id: string) => void
   addSetupTemplate: (template: SetupTemplate) => void
   removeSetupTemplate: (id: string) => void
+  setSetupInstructors: (ids: string[]) => void
   setGenerateDays: (days: 14 | 28) => void
   resetSetup: () => void
-  completeSetup: () => void
+  completeSetup: () => Promise<void>
+  generateSessionsForStudio: (studioId: string, startDate: Date, days: number) => Promise<number>
 }
 
 const initialSetup: SetupState = {
   step: 0,
   studioName: '',
+  studioDescription: '',
   studioAddress: '',
-  timezone: 'America/New_York',
+  coordLat: null,
+  coordLng: null,
+  timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
+  waitlistEnabled: true,
   rooms: [],
   serviceTypes: [],
   products: [],
   templates: [],
+  instructorIds: [],
   generateDays: 14,
 }
 
@@ -79,6 +92,7 @@ let idCounter = 1000
 
 export const createSetupSlice: StateCreator<AppStore, [], [], SetupSlice> = (set, get) => ({
   setup: { ...initialSetup },
+  studioTemplates: {},
 
   setSetupStep: (step) => set((state) => ({ setup: { ...state.setup, step } })),
 
@@ -123,117 +137,47 @@ export const createSetupSlice: StateCreator<AppStore, [], [], SetupSlice> = (set
       setup: { ...state.setup, templates: state.setup.templates.filter((t) => t.id !== id) },
     })),
 
+  setSetupInstructors: (ids) =>
+    set((state) => ({ setup: { ...state.setup, instructorIds: ids } })),
+
   setGenerateDays: (days) =>
     set((state) => ({ setup: { ...state.setup, generateDays: days } })),
 
   resetSetup: () => set({ setup: { ...initialSetup } }),
 
-  completeSetup: () => {
+  completeSetup: async () => {
     const { setup } = get()
-    const studioId = `studio-setup-${++idCounter}`
-
-    // Build studio with service types and rooms
-    const serviceTypes = setup.serviceTypes.map((st) => ({
-      id: `st-${++idCounter}`,
-      studioId,
-      name: st.name,
-      description: '',
-      color: st.color,
-      durationMinutes: st.durationMinutes,
-    }))
-
-    const rooms = setup.rooms.map((r) => ({
-      id: `room-${++idCounter}`,
-      studioId,
-      name: r.name,
-      capacity: r.capacity,
-    }))
-
-    const newStudio = {
-      id: studioId,
-      name: setup.studioName,
-      description: 'Your new studio',
-      address: setup.studioAddress,
-      ownerId: 'owner-setup',
-      serviceTypes,
-      rooms,
-      createdAt: new Date(),
-    }
-
-    // Add products
-    const newProducts = setup.products.map((p) => ({
-      id: `prod-${++idCounter}`,
-      studioId,
-      type: p.type,
-      name: p.name,
-      description: '',
-      price: p.price,
-      credits: p.credits,
-      sessionCount: p.sessions,
-      validDays: p.expiryDays || 30,
-    }))
-
-    // Generate sessions from templates
-    const newSessions: Array<{
-      id: string
-      studioId: string
-      serviceTypeId: string
-      roomId: string
-      instructorId: string
-      date: Date
-      startTime: string
-      endTime: string
-      capacity: number
-      bookedCount: number
-      waitlistCount: number
-      status: 'SCHEDULED'
-    }> = []
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    setup.templates.forEach((template) => {
-      const serviceType = serviceTypes.find(
-        (_, idx) => setup.serviceTypes[idx]?.id === template.serviceTypeId
-      ) || serviceTypes[0]
-      const room = rooms[0]
-      if (!serviceType || !room) return
-
-      for (let d = 0; d < setup.generateDays; d++) {
-        const date = new Date(today)
-        date.setDate(date.getDate() + d)
-        const dayOfWeek = date.getDay()
-
-        if (template.daysOfWeek.includes(dayOfWeek)) {
-          const [h, m] = template.startTime.split(':').map(Number)
-          const duration = setup.serviceTypes.find((s) => s.id === template.serviceTypeId)?.durationMinutes || 60
-          const endH = h + Math.floor((m + duration) / 60)
-          const endM = (m + duration) % 60
-
-          newSessions.push({
-            id: `session-${++idCounter}`,
-            studioId,
-            serviceTypeId: serviceType.id,
-            roomId: room.id,
-            instructorId: 'instructor-1',
-            date,
-            startTime: template.startTime,
-            endTime: `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`,
-            capacity: template.capacityOverride || room.capacity,
-            bookedCount: 0,
-            waitlistCount: 0,
-            status: 'SCHEDULED',
-          })
-        }
-      }
+    const res = await fetch('/api/owner/studios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: setup.studioName,
+        description: setup.studioDescription,
+        address: setup.studioAddress,
+        coordLat: setup.coordLat,
+        coordLng: setup.coordLng,
+        timezone: setup.timezone,
+        waitlistEnabled: setup.waitlistEnabled,
+        rooms: setup.rooms,
+        serviceTypes: setup.serviceTypes,
+        products: setup.products,
+        templates: setup.templates,
+        instructorIds: setup.instructorIds,
+        generateDays: setup.generateDays,
+      }),
     })
+    if (!res.ok) throw new Error('Studio setup failed')
+    set({ setup: { ...initialSetup } })
+  },
 
-    // Update store
-    set((state) => ({
-      studios: [...state.studios, newStudio],
-      products: [...state.products, ...newProducts],
-      sessions: [...state.sessions, ...newSessions],
-      setup: { ...initialSetup },
-    }))
+  generateSessionsForStudio: async (studioId, startDate, days) => {
+    const res = await fetch(`/api/owner/studios/${studioId}/generate-sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate: startDate.toISOString(), days }),
+    })
+    if (!res.ok) return 0
+    const { count } = await res.json()
+    return count as number
   },
 })

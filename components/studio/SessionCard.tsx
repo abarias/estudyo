@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, Users } from 'lucide-react'
+import { Clock, Users, UserCheck } from 'lucide-react'
 import type { Session, ServiceType } from '@/types/domain'
 import { Card, Button } from '@/components/ui'
 
@@ -8,10 +8,13 @@ interface SessionCardProps {
   session: Session
   serviceType?: ServiceType
   onBook: () => void
+  onLeaveWaitlist?: () => void
   isBooked?: boolean
+  isOnWaitlist?: boolean
+  waitlistEnabled?: boolean
 }
 
-export default function SessionCard({ session, serviceType, onBook, isBooked }: SessionCardProps) {
+export default function SessionCard({ session, serviceType, onBook, onLeaveWaitlist, isBooked, isOnWaitlist, waitlistEnabled = true }: SessionCardProps) {
   const spotsLeft = session.capacity - session.bookedCount
   const isFull = spotsLeft <= 0
 
@@ -36,17 +39,31 @@ export default function SessionCard({ session, serviceType, onBook, isBooked }: 
               {spotsLeft > 0 ? `${spotsLeft} spots` : 'Full'}
             </span>
           </div>
+          {session.instructorName && (
+            <div className="flex items-center gap-1 mt-0.5 text-xs text-muted">
+              <UserCheck size={12} />
+              {session.instructorName}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        {session.waitlistCount > 0 && (
+        {session.waitlistCount > 0 && !isOnWaitlist && (
           <span className="text-xs text-muted">{session.waitlistCount} on waitlist</span>
         )}
         <div className="ml-auto">
           {isBooked ? (
             <span className="text-sm text-sage font-medium">Booked</span>
-          ) : (
+          ) : isOnWaitlist ? (
+            <Button
+              variant="secondary"
+              onClick={onLeaveWaitlist}
+              className="text-sm py-2"
+            >
+              Leave Waitlist
+            </Button>
+          ) : isFull && !waitlistEnabled ? null : (
             <Button
               variant={isFull ? 'secondary' : 'primary'}
               onClick={onBook}

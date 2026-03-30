@@ -37,6 +37,7 @@ export interface Studio {
   address: string
   imageUrl?: string
   coordinates?: Coordinates
+  waitlistEnabled: boolean
   ownerId: string
   serviceTypes: ServiceType[]
   rooms: Room[]
@@ -77,6 +78,7 @@ export interface Session {
   serviceTypeId: string
   roomId: string
   instructorId: string
+  instructorName?: string
   templateId?: string
   date: Date
   startTime: string // HH:mm

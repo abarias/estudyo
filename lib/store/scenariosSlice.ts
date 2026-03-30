@@ -24,6 +24,7 @@ function getBaseStudios(): Studio[] {
       description: 'Premium movement studio in the heart of Bonifacio Global City.',
       address: '4F High Street South Corporate Plaza, BGC, Taguig',
       coordinates: { lat: 14.5503, lng: 121.0494 },
+      waitlistEnabled: true,
       ownerId: 'owner-1',
       serviceTypes: [
         { id: 'st-1', studioId: 'studio-1', name: 'Mat Pilates', description: 'Core strength', color: 'sage', durationMinutes: 55 },

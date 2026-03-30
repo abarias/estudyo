@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { getAuthUserId } from '@/lib/session'
-import { products } from '@/lib/mockStore'
 import { addDays } from 'date-fns'
 
 // POST /api/wallet/purchase — purchase a product and add entitlement
@@ -10,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { productId } = await req.json()
-  const product = products.find(p => p.id === productId)
+  const product = await db.product.findUnique({ where: { id: productId } })
   if (!product) return Response.json({ error: 'Product not found' }, { status: 404 })
 
   const entitlement = await db.entitlement.create({
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
       type: product.type === 'CREDIT_PACK' ? 'CREDITS' : 'CREDITS',
       productId,
       remaining: product.credits ?? product.sessionCount ?? 1,
-      serviceTypeIds: JSON.stringify(product.serviceTypeIds ?? []),
+      serviceTypeIds: product.serviceTypeIds ?? '[]',
       expiresAt: product.validDays ? addDays(new Date(), product.validDays) : null,
     },
   })

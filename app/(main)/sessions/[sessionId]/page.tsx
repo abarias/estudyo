@@ -92,7 +92,7 @@ export default function SessionDetailPage() {
         <div className="bg-sage/10 rounded-2xl p-4 text-center">
           <span className="text-sage font-medium">You&apos;re booked for this session!</span>
         </div>
-      ) : (
+      ) : isFull && !studio?.waitlistEnabled ? null : (
         <Button fullWidth onClick={() => setSheetOpen(true)}>
           {isFull ? 'Join Waitlist' : 'Book This Session'}
         </Button>
@@ -104,6 +104,7 @@ export default function SessionDetailPage() {
         session={session}
         serviceType={serviceType}
         studio={studio || undefined}
+        waitlistEnabled={studio?.waitlistEnabled ?? true}
         entitlements={entitlements}
         products={products}
         onBook={handleBook}

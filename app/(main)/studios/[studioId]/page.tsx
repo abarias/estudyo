@@ -28,6 +28,7 @@ export default function StudioDetailPage() {
   const bookSession = useStore((s) => s.bookSession)
   const cancelBooking = useStore((s) => s.cancelBooking)
   const joinWaitlist = useStore((s) => s.joinWaitlist)
+  const leaveWaitlist = useStore((s) => s.leaveWaitlist)
   const acceptWaitlistOffer = useStore((s) => s.acceptWaitlistOffer)
   const purchaseProduct = useStore((s) => s.purchaseProduct)
 
@@ -63,11 +64,14 @@ export default function StudioDetailPage() {
     load()
   }, [studioId])
 
-  // Load sessions when date changes
+  // Load sessions and refresh studio when date changes
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      await loadSessions({ studioId, date: selectedDate })
+      await Promise.all([
+        loadSessions({ studioId, date: selectedDate }),
+        loadStudios(),
+      ])
       setLoading(false)
     }
     load()
@@ -78,6 +82,8 @@ export default function StudioDetailPage() {
   )
 
   const handleOpenSheet = (session: Session) => {
+    const isFull = session.capacity - session.bookedCount <= 0
+    if (isFull && !studio?.waitlistEnabled) return
     setSelectedSession(session)
     setSheetOpen(true)
   }
@@ -89,7 +95,21 @@ export default function StudioDetailPage() {
 
   const handleJoinWaitlist = async () => {
     if (!selectedSession) return
-    return await joinWaitlist(selectedSession.id)
+    const result = await joinWaitlist(selectedSession.id)
+    if (result !== true) {
+      // Waitlist may have been disabled — refresh studio so UI updates
+      await loadStudios()
+      return result // pass error string to sheet
+    }
+    return true
+  }
+
+  const handleLeaveWaitlist = async (sessionId: string) => {
+    const entry = waitlistEntries.find(
+      (w) => w.sessionId === sessionId && w.status === 'WAITING'
+    )
+    if (!entry) return
+    await leaveWaitlist(entry.id, sessionId)
   }
 
   const handleCancel = async (bookingId: string) => {
@@ -134,6 +154,9 @@ export default function StudioDetailPage() {
       <div>
         <h1 className="text-xl font-bold text-text">{studio.name}</h1>
         <p className="text-sm text-muted">{studio.address}</p>
+        {studio.description && (
+          <p className="text-sm text-muted mt-1">{studio.description}</p>
+        )}
       </div>
 
       <DateStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
@@ -170,7 +193,12 @@ export default function StudioDetailPage() {
               session={session}
               serviceType={getServiceType(session.studioId, session.serviceTypeId)}
               isBooked={bookedSessionIds.has(session.id)}
+              isOnWaitlist={waitlistEntries.some(
+                (w) => w.sessionId === session.id && w.status === 'WAITING'
+              )}
+              waitlistEnabled={studio?.waitlistEnabled ?? true}
               onBook={() => handleOpenSheet(session)}
+              onLeaveWaitlist={() => handleLeaveWaitlist(session.id)}
             />
           ))
         )}
@@ -182,6 +210,8 @@ export default function StudioDetailPage() {
         session={selectedSession}
         serviceType={selectedSession ? getServiceType(selectedSession.studioId, selectedSession.serviceTypeId) : undefined}
         studio={studio}
+        waitlistEnabled={studio?.waitlistEnabled ?? true}
+        requiresCredits={false}
         entitlements={entitlements}
         products={products.filter(p => p.studioId === studioId)}
         userBooking={userBooking}

@@ -61,6 +61,128 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ── Studio catalog models ───────────────────────────────────────────────────
+
+model Studio {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  address     String   @default("")
+  imageUrl    String?
+  coordLat    Float?
+  coordLng    Float?
+  timezone        String   @default("UTC")
+  waitlistEnabled Boolean  @default(true)
+  ownerId         String
+  createdAt       DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms        Room[]
+  serviceTypes ServiceType[]
+  products     Product[]
+  classSessions ClassSession[]
+  instructors  StudioInstructor[]
+}
+
+model StudioInstructor {
+  studioId     String
+  instructorId String
+  addedAt      DateTime @default(now())
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@id([studioId, instructorId])
+  @@index([instructorId])
+}
+
+model Room {
+  id       String @id @default(cuid())
+  studioId String
+  name     String
+  capacity Int
+
+  studio        Studio         @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  classSessions ClassSession[]
+
+  @@index([studioId])
+}
+
+model ServiceType {
+  id              String @id @default(cuid())
+  studioId        String
+  name            String
+  description     String @default("")
+  color           String @default("sage")
+  durationMinutes Int
+
+  studio        Studio           @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  classSessions ClassSession[]
+  templates     SessionTemplate[]
+
+  @@index([studioId])
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  studioId       String
+  type           String
+  name           String
+  description    String   @default("")
+  price          Int
+  credits        Int?
+  sessionCount   Int?
+  validDays      Int?
+  serviceTypeIds String   @default("[]")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  studio Studio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+  @@index([studioId])
+}
+
+model SessionTemplate {
+  id               String   @id @default(cuid())
+  studioId         String
+  serviceTypeId    String
+  roomId           String
+  instructorId     String   @default("")
+  daysOfWeek       String   @default("[]")
+  startTime        String
+  capacityOverride Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  @@index([studioId])
+}
+
+model ClassSession {
+  id            String   @id @default(cuid())
+  studioId      String
+  serviceTypeId String
+  roomId        String
+  instructorId  String   @default("")
+  templateId    String?
+  date          DateTime
+  startTime     String
+  endTime       String
+  capacity      Int
+  bookedCount   Int      @default(0)
+  waitlistCount Int      @default(0)
+  status        String   @default("SCHEDULED")
+  createdAt     DateTime @default(now())
+
+  studio      Studio      @relation(fields: [studioId], references: [id], onDelete: Cascade)
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+  room        Room        @relation(fields: [roomId], references: [id])
+
+  @@index([studioId])
+  @@index([date])
+  @@index([studioId, date])
+}
+
 // ── App models ─────────────────────────────────────────────────────────────
 
 model Booking {
